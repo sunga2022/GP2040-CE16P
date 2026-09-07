@@ -1,6 +1,10 @@
+# GP2040-CE16P
+
+Cloned from [sunga2022/GP2040-CE](https://github.com/sunga2022/GP2040-CE). Firmware binaries from this copy are named `GP2040-CE16P_*`.
+
 <p align="center">
   <a href="https://gp2040-ce.info">
-    <img alt="GP2040-CE" src="https://raw.githubusercontent.com/OpenStickCommunity/Site/main/docs/assets/images/gp2040-ce-logo.png" />
+    <img alt="GP2040-CE16P" src="https://raw.githubusercontent.com/OpenStickCommunity/Site/main/docs/assets/images/gp2040-ce-logo.png" />
   </a>
 </p>
 
