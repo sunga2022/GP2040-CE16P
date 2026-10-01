@@ -84,6 +84,13 @@ const Navigation = () => {
 						<NavDropdown.Item
 							as={NavLink}
 							eventKey={eventKey++}
+							to="/peripheral-mapping#usb"
+						>
+							{t('PeripheralMapping:usb-label')}
+						</NavDropdown.Item>
+						<NavDropdown.Item
+							as={NavLink}
+							eventKey={eventKey++}
 							to="/led-config"
 						>
 							{t('Navigation:led-config-label')}
