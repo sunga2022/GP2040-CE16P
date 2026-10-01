@@ -1,5 +1,4 @@
 import { useContext, useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
 import { AppContext } from '../Contexts/AppContext';
 import { Button, Form, FormCheck, FormSelect, Table } from 'react-bootstrap';
 import { Formik, useFormikContext, getIn } from 'formik';
@@ -68,13 +67,6 @@ const FormContext = () => {
 export default function PeripheralMappingPage() {
 	const { setButtonLabels, usedPins } = useContext(AppContext);
 	const [saveMessage, setSaveMessage] = useState('');
-	const { hash } = useLocation();
-
-	useEffect(() => {
-		if (hash === '#usb') {
-			document.getElementById('usb')?.scrollIntoView({ block: 'center' });
-		}
-	}, [hash]);
 
 	let allPins = [
 		...Array(boards[import.meta.env.VITE_GP2040_BOARD].maxPin + 1).keys(),
@@ -163,7 +155,6 @@ export default function PeripheralMappingPage() {
 								{PERIPHERAL_DEVICES.map((peripheral, i) => (
 									<Form.Group
 										key={`peripheral-${peripheral.value}`}
-										id={peripheral.label}
 										className="row mb-3"
 									>
 										<Form.Label>
