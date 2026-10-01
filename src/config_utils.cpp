@@ -1822,6 +1822,31 @@ static bool loadConfigInner(Config& config)
     return pb_decode(&inputStream, Config_fields, &config);
 }
 
+#ifdef PICO16N_REPAIR_USB_HOST_BUILD
+// Repair only the broken defaults saved by the first USB-host build.
+// The saved board version changes below, so this runs once on upgrade.
+static void repairPico16NUsbHostBuild(Config& config) {
+    if (strcmp(config.boardVersion, "6504429") != 0)
+        return;
+
+    const unsigned int pins[] = {6, 7, 8, 17};
+    const GpioAction actions[] = {GpioAction::BUTTON_PRESS_A2,
+        GpioAction::BUTTON_PRESS_A1, GpioAction::BUTTON_PRESS_S1,
+        GpioAction::BUTTON_PRESS_S2};
+    const auto repair = [&](GpioMappings& mappings) {
+        for (unsigned int i = 0; i < 4; ++i) {
+            if (pins[i] < mappings.pins_count &&
+                mappings.pins[pins[i]].action == GpioAction::ASSIGNED_TO_ADDON) {
+                mappings.pins[pins[i]].action = actions[i];
+            }
+        }
+    };
+    repair(config.gpioMappings);
+    for (unsigned int i = 0; i < config.profileOptions.gpioMappingsSets_count; ++i)
+        repair(config.profileOptions.gpioMappingsSets[i]);
+}
+#endif
+
 void ConfigUtils::load(Config& config)
 {
     // First try to load from Protobuf storage, if that fails fall back to legacy storage.
@@ -1860,6 +1885,10 @@ void ConfigUtils::load(Config& config)
     migrateMacroPinsToGpio(config);
     // Migrate old JS slider add-on to core
     migrateJSliderToCore(config);
+
+#ifdef PICO16N_REPAIR_USB_HOST_BUILD
+    repairPico16NUsbHostBuild(config);
+#endif
 
     // Update boardVersion, in case we migrated from an older version
     strncpy(config.boardVersion, GP2040VERSION, sizeof(config.boardVersion));
