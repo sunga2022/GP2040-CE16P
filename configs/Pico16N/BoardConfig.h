@@ -10,6 +10,7 @@
 #include "class/hid/hid.h"
 
 #define BOARD_CONFIG_LABEL "Pico16N"
+#define PICO16N_REPAIR_USB_HOST_BUILD 1
 
 // Main pin mapping Configuration
 //                                                  // GP2040 | Xinput | Switch  | PS3/4/5  | Dinput | Arcade |
@@ -39,10 +40,6 @@
 #define GPIO_PIN_01 GpioAction::ASSIGNED_TO_ADDON
 #define GPIO_PIN_03 GpioAction::ASSIGNED_TO_ADDON
 #define GPIO_PIN_04 GpioAction::ASSIGNED_TO_ADDON
-#define GPIO_PIN_06 GpioAction::ASSIGNED_TO_ADDON
-#define GPIO_PIN_07 GpioAction::ASSIGNED_TO_ADDON
-#define GPIO_PIN_08 GpioAction::ASSIGNED_TO_ADDON
-#define GPIO_PIN_17 GpioAction::ASSIGNED_TO_ADDON
 #define GPIO_PIN_28 GpioAction::ASSIGNED_TO_ADDON
 
 // Keyboard Mapping Configuration
@@ -70,6 +67,7 @@
 #define TURBO_ENABLED 1
 #define GPIO_PIN_24 GpioAction::BUTTON_PRESS_TURBO
 
+// Enable the USB host peripheral (D+ GPIO3, D- GPIO4).
 #define USB_PERIPHERAL_ENABLED 1
 #define USB_PERIPHERAL_PIN_DPLUS 3
 #define USB_PERIPHERAL_PIN_ORDER 0
