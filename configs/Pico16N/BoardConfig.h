@@ -10,6 +10,12 @@
 #include "class/hid/hid.h"
 
 #define BOARD_CONFIG_LABEL "Pico16N"
+#define PICO16N_CUSTOM_DEFAULTS 1
+#define DEFAULT_INPUT_MODE INPUT_MODE_XINPUT
+#define DEFAULT_DPAD_MODE DPAD_MODE_DIGITAL
+#define DEFAULT_SOCD_MODE SOCD_MODE_NEUTRAL
+#define DEFAULT_SHOT_PER_SEC 30
+#include "DisplayLayout.h"
 
 // Main pin mapping Configuration
 //                                                  // GP2040 | Xinput | Switch  | PS3/4/5  | Dinput | Arcade |
@@ -39,10 +45,6 @@
 #define GPIO_PIN_01 GpioAction::ASSIGNED_TO_ADDON
 #define GPIO_PIN_03 GpioAction::ASSIGNED_TO_ADDON
 #define GPIO_PIN_04 GpioAction::ASSIGNED_TO_ADDON
-#define GPIO_PIN_06 GpioAction::ASSIGNED_TO_ADDON
-#define GPIO_PIN_07 GpioAction::ASSIGNED_TO_ADDON
-#define GPIO_PIN_08 GpioAction::ASSIGNED_TO_ADDON
-#define GPIO_PIN_17 GpioAction::ASSIGNED_TO_ADDON
 #define GPIO_PIN_28 GpioAction::ASSIGNED_TO_ADDON
 
 // Keyboard Mapping Configuration
@@ -79,11 +81,11 @@
 #define DEFAULT_PS5AUTHENTICATION_TYPE INPUT_MODE_AUTH_TYPE_USB
 
 // 新增的模式配置
-#define DEFAULT_INPUT_MODE_B4 INPUT_MODE_PS4        // 模式3: PS4 (改为USB认证)
+#define DEFAULT_INPUT_MODE_B4 INPUT_MODE_PS4        // 模式3: PS4 (板载钥匙认证)
 #define DEFAULT_INPUT_MODE_L2 INPUT_MODE_SWITCH_PRO // 模式4: Nintendo Switch Pro
 
-// PS4使用USB认证（与PS5相同）
-#define DEFAULT_PS4AUTHENTICATION_TYPE INPUT_MODE_AUTH_TYPE_USB
+// PS4 uses the built-in board key; PS5 uses USB passthrough.
+#define DEFAULT_PS4AUTHENTICATION_TYPE INPUT_MODE_AUTH_TYPE_KEYS
 
 #define BOARD_LEDS_PIN 28
 #define LED_BRIGHTNESS_MAXIMUM 100
@@ -114,12 +116,12 @@
  #define SPLASH_MODE SPLASH_MODE_STATIC
  #define SPLASH_DURATION 3000
  
-#define BUTTON_LAYOUT BUTTON_LAYOUT_STICKLESS        // 左边4个按钮
-#define BUTTON_LAYOUT_RIGHT BUTTON_LAYOUT_STICKLESSB // 右边8个按钮
+#define BUTTON_LAYOUT BUTTON_LAYOUT_BOARD_DEFINED_A
+#define BUTTON_LAYOUT_RIGHT BUTTON_LAYOUT_BOARD_DEFINED_B
 
 // Additional Button Support
-#define GPIO_PIN_29 GpioAction::BUTTON_PRESS_UP
-#define GPIO_PIN_20 GpioAction::BUTTON_PRESS_L3
+#define GPIO_PIN_29 GpioAction::BUTTON_PRESS_MACRO_2
+#define GPIO_PIN_20 GpioAction::BUTTON_PRESS_MACRO_1
 
  #define BOARD_LED_ENABLED 1
  #define BOARD_LED_TYPE ON_BOARD_LED_MODE_MODE_INDICATOR

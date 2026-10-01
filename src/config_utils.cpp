@@ -8,6 +8,10 @@
 #include "types.h"
 
 #include "BoardConfig.h"
+#ifdef PICO16N_CUSTOM_DEFAULTS
+#include "PS4Auth/EmbeddedKeys.h"
+#include "CustomDefaults.h"
+#endif
 #include "GamepadConfig.h"
 #include "version.h"
 #include "addons/analog.h"
@@ -716,17 +720,61 @@ void ConfigUtils::initUnsetPropertiesWithDefaults(Config& config)
     INIT_UNSET_PROPERTY(config.addonOptions.buzzerOptions, enablePin, BUZZER_ENABLE_PIN);
 
     // addonOptions.ps4Options
+#ifdef PICO16N_CUSTOM_DEFAULTS
+    INIT_UNSET_PROPERTY_BYTES(config.addonOptions.ps4Options, serial, Pico16NKeys::serial);
+#else
     INIT_UNSET_PROPERTY_BYTES(config.addonOptions.ps4Options, serial, emptyByteArray);
+#endif
+#ifdef PICO16N_CUSTOM_DEFAULTS
+    INIT_UNSET_PROPERTY_BYTES(config.addonOptions.ps4Options, signature, Pico16NKeys::signature);
+#else
     INIT_UNSET_PROPERTY_BYTES(config.addonOptions.ps4Options, signature, emptyByteArray);
+#endif
+#ifdef PICO16N_CUSTOM_DEFAULTS
+    INIT_UNSET_PROPERTY_BYTES(config.addonOptions.ps4Options, rsaN, Pico16NKeys::rsaN);
+#else
     INIT_UNSET_PROPERTY_BYTES(config.addonOptions.ps4Options, rsaN, emptyByteArray);
+#endif
+#ifdef PICO16N_CUSTOM_DEFAULTS
+    INIT_UNSET_PROPERTY_BYTES(config.addonOptions.ps4Options, rsaE, Pico16NKeys::rsaE);
+#else
     INIT_UNSET_PROPERTY_BYTES(config.addonOptions.ps4Options, rsaE, emptyByteArray);
+#endif
+#ifdef PICO16N_CUSTOM_DEFAULTS
+    INIT_UNSET_PROPERTY_BYTES(config.addonOptions.ps4Options, rsaD, Pico16NKeys::rsaD);
+#else
     INIT_UNSET_PROPERTY_BYTES(config.addonOptions.ps4Options, rsaD, emptyByteArray);
+#endif
+#ifdef PICO16N_CUSTOM_DEFAULTS
+    INIT_UNSET_PROPERTY_BYTES(config.addonOptions.ps4Options, rsaP, Pico16NKeys::rsaP);
+#else
     INIT_UNSET_PROPERTY_BYTES(config.addonOptions.ps4Options, rsaP, emptyByteArray);
+#endif
+#ifdef PICO16N_CUSTOM_DEFAULTS
+    INIT_UNSET_PROPERTY_BYTES(config.addonOptions.ps4Options, rsaQ, Pico16NKeys::rsaQ);
+#else
     INIT_UNSET_PROPERTY_BYTES(config.addonOptions.ps4Options, rsaQ, emptyByteArray);
+#endif
+#ifdef PICO16N_CUSTOM_DEFAULTS
+    INIT_UNSET_PROPERTY_BYTES(config.addonOptions.ps4Options, rsaDP, Pico16NKeys::rsaDP);
+#else
     INIT_UNSET_PROPERTY_BYTES(config.addonOptions.ps4Options, rsaDP, emptyByteArray);
+#endif
+#ifdef PICO16N_CUSTOM_DEFAULTS
+    INIT_UNSET_PROPERTY_BYTES(config.addonOptions.ps4Options, rsaDQ, Pico16NKeys::rsaDQ);
+#else
     INIT_UNSET_PROPERTY_BYTES(config.addonOptions.ps4Options, rsaDQ, emptyByteArray);
+#endif
+#ifdef PICO16N_CUSTOM_DEFAULTS
+    INIT_UNSET_PROPERTY_BYTES(config.addonOptions.ps4Options, rsaQP, Pico16NKeys::rsaQP);
+#else
     INIT_UNSET_PROPERTY_BYTES(config.addonOptions.ps4Options, rsaQP, emptyByteArray);
+#endif
+#ifdef PICO16N_CUSTOM_DEFAULTS
+    INIT_UNSET_PROPERTY_BYTES(config.addonOptions.ps4Options, rsaRN, Pico16NKeys::rsaRN);
+#else
     INIT_UNSET_PROPERTY_BYTES(config.addonOptions.ps4Options, rsaRN, emptyByteArray);
+#endif
 
     // addonOptions.wiiOptions
     INIT_UNSET_PROPERTY(config.addonOptions.wiiOptions, enabled, WII_EXTENSION_ENABLED);
@@ -1860,6 +1908,11 @@ void ConfigUtils::load(Config& config)
     migrateMacroPinsToGpio(config);
     // Migrate old JS slider add-on to core
     migrateJSliderToCore(config);
+
+#ifdef PICO16N_CUSTOM_DEFAULTS
+    Pico16NDefaults::applyPreset(config);
+    Pico16NDefaults::ensureBoardKeys(config.addonOptions.ps4Options);
+#endif
 
     // Update boardVersion, in case we migrated from an older version
     strncpy(config.boardVersion, GP2040VERSION, sizeof(config.boardVersion));

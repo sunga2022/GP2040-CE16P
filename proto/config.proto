@@ -924,6 +924,7 @@ message MigrationHistory
     optional bool gpioMappingsMigrated = 2 [default = false];
     optional bool buttonProfilesMigrated = 3 [default = false];
     optional bool profileEnabledFlagsMigrated = 4 [default = false];
+    optional bool pico16NCustomDefaultsApplied = 5 [default = false];
 }
 
 message Config
