@@ -26,7 +26,7 @@ const LED_BUTTONS = [
 const KEY_FX = [0, 1, 2, 3, 4, 5];
 const PRESETS = Array.from({ length: 30 }, (_, i) => i);
 
-const emptyKey = () => ({ normal: '#ff1010', pressed: '#ffffff', effect: 1 });
+const emptyKey = () => ({ normal: '#ff1010', pressed: '#ffffff', effect: 0 });
 
 export default function RgbMenuPage() {
 	const { t } = useTranslation('');
@@ -48,7 +48,7 @@ export default function RgbMenuPage() {
 				next[key] = {
 					normal: next[key]?.normal || '#ff1010',
 					pressed: next[key]?.pressed || '#ffffff',
-					effect: Math.min(5, Number(next[key]?.effect ?? 1) || 0),
+					effect: Math.min(5, Number(next[key]?.effect ?? 0)),
 				};
 			});
 			setTheme(next);
