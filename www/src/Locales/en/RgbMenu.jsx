@@ -54,6 +54,8 @@ export default {
 	'btn-Down': 'Down',
 	'btn-Right': 'Right',
 	'btn-Up': 'Up',
+	'btn-L3': 'L3',
+	'btn-R3': 'R3',
 	'btn-B3': 'X / B3',
 	'btn-B4': 'Y / B4',
 	'btn-R1': 'RB / R1',
@@ -62,6 +64,4 @@ export default {
 	'btn-B2': 'B / B2',
 	'btn-R2': 'RT / R2',
 	'btn-L2': 'LT / L2',
-	'btn-R3': 'R3',
-	'btn-L3': 'L3',
 };

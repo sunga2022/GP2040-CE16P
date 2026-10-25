@@ -11,6 +11,8 @@ const LED_BUTTONS = [
 	'Down',
 	'Right',
 	'Up',
+	'L3',
+	'R3',
 	'B3',
 	'B4',
 	'R1',
@@ -19,8 +21,6 @@ const LED_BUTTONS = [
 	'B2',
 	'R2',
 	'L2',
-	'R3',
-	'L3',
 ];
 
 const KEY_FX = [0, 1, 2, 3, 4, 5];
