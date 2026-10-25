@@ -37,7 +37,8 @@ import CaptureButton from '../Components/CaptureButton';
 import { BUTTON_MASKS, DPAD_MASKS, getButtonLabels } from '../Data/Buttons';
 import { BUTTON_ACTIONS, PinActionKeys, PinActionValues } from '../Data/Pins';
 import './PinMapping.scss';
-import { MultiValue, SingleValue } from 'react-select';
+import { components, MultiValue, SingleValue } from 'react-select';
+import type { GroupBase, ValueContainerProps } from 'react-select';
 import InfoCircle from '../Icons/InfoCircle';
 import WebApi from '../Services/WebApi';
 
@@ -163,6 +164,37 @@ const ProfileLabel = memo(function ProfileLabel({
 	);
 });
 
+const pinKey = (pin: number) => (pin < 10 ? `pin0${pin}` : `pin${pin}`);
+
+// Turbo 24, FN 5, A2 6, A1 7, S1 8, S2 17 — visible on the panel, not editable
+const LOCKED_PINS = [5, 6, 7, 8, 17, 24];
+const LOCKED_PIN_KEYS = new Set(LOCKED_PINS.map(pinKey));
+
+const EDITABLE_BUTTONS: {
+	pin: number;
+	name: string;
+	x: number;
+	y: number;
+	large?: boolean;
+}[] = [
+	{ pin: 23, name: '左', x: 12.9, y: 35.6 },
+	{ pin: 22, name: '下', x: 24.8, y: 36.1 },
+	{ pin: 16, name: '右', x: 35.2, y: 46.0 },
+	{ pin: 21, name: '上', x: 41.3, y: 87.9, large: true },
+	{ pin: 29, name: 'M1', x: 28.9, y: 16.4 },
+	{ pin: 2, name: 'L3', x: 48.6, y: 16.5 },
+	{ pin: 12, name: 'X', x: 47.4, y: 37.2 },
+	{ pin: 9, name: 'Y', x: 58.3, y: 28.8 },
+	{ pin: 10, name: 'RB', x: 70.2, y: 29.5 },
+	{ pin: 11, name: 'LB', x: 82.0, y: 32.3 },
+	{ pin: 18, name: 'A', x: 46.5, y: 60.1 },
+	{ pin: 13, name: 'B', x: 57.4, y: 51.6 },
+	{ pin: 14, name: 'RT', x: 69.3, y: 52.3 },
+	{ pin: 15, name: 'LT', x: 81.2, y: 55.1 },
+	{ pin: 20, name: 'M2', x: 26.1, y: 84.0 },
+	{ pin: 19, name: 'R3', x: 54.2, y: 76.0 },
+];
+
 const PinSelectList = memo(function PinSelectList({
 	profileIndex,
 }: {
@@ -184,6 +216,7 @@ const PinSelectList = memo(function PinSelectList({
 	const onChange = useCallback(
 		(pin: string) =>
 			(selected: MultiValue<OptionType> | SingleValue<OptionType>) => {
+				if (LOCKED_PIN_KEYS.has(pin)) return;
 				// Handle clearing
 				if (!selected || (Array.isArray(selected) && !selected.length)) {
 					setProfilePin(profileIndex, pin, {
@@ -225,8 +258,10 @@ const PinSelectList = memo(function PinSelectList({
 						);
 					}
 				} else {
+					const option = Array.isArray(selected) ? selected[0] : selected;
+					if (!option) return;
 					setProfilePin(profileIndex, pin, {
-						action: selected[0].value,
+						action: option.value,
 						customButtonMask: 0,
 						customDpadMask: 0,
 					});
@@ -238,7 +273,6 @@ const PinSelectList = memo(function PinSelectList({
 	const getOptionLabel = useCallback(
 		(option: OptionType) => {
 			const labelKey = option.label?.split('BUTTON_PRESS_')?.pop();
-			// Need to fallback as some button actions are not part of button names
 			return (
 				(labelKey && buttonNames[labelKey]) ||
 				t(`Proto:GpioAction.${option.label}`)
@@ -246,24 +280,110 @@ const PinSelectList = memo(function PinSelectList({
 		},
 		[buttonNames],
 	);
+
+	const ValueContainer = useCallback(
+		(
+			props: ValueContainerProps<
+				OptionType,
+				true,
+				GroupBase<OptionType>
+			>,
+		) => {
+			const selected = props.getValue();
+			const text = selected.map((option) => getOptionLabel(option)).join(' + ');
+			return (
+				<components.ValueContainer {...props}>
+					{props.hasValue ? (
+						<div className="pin-layout-select__value" title={text}>
+							{text}
+						</div>
+					) : null}
+					{props.children}
+				</components.ValueContainer>
+			);
+		},
+		[getOptionLabel],
+	);
 	return (
-		<div className="pin-grid gap-3 mt-2">
-			{Object.entries(pins).map(([pin, pinData], index) => (
-				<div key={`select-${index}`} className="d-flex align-items-center">
-					<div className="d-flex flex-shrink-0" style={{ width: '3.5rem' }}>
-						<label>GP{index}</label>
+		<div className="pin-layout-board">
+			<img
+				src="images/pico16n-panel.jpg"
+				alt="Pico16N"
+				className="pin-layout-board__image"
+				draggable={false}
+			/>
+			{EDITABLE_BUTTONS.map((button) => {
+				const key = pinKey(button.pin);
+				const pinData = (pins[key] as MaskPayload) || {
+					action: BUTTON_ACTIONS.NONE,
+					customButtonMask: 0,
+					customDpadMask: 0,
+				};
+				return (
+					<div
+						key={key}
+						className={`pin-layout-board__slot${button.large ? ' is-large' : ''}`}
+						style={{ left: `${button.x}%`, top: `${button.y}%` }}
+					>
+						<CustomSelect
+							isClearable
+							isSearchable={false}
+							isMulti={!isDisabled(pinData.action)}
+							options={groupedOptions}
+							isDisabled={isDisabled(pinData.action)}
+							getOptionLabel={getOptionLabel}
+							formatOptionLabel={getOptionLabel}
+							components={{ ValueContainer }}
+							onChange={onChange(key)}
+							value={getMultiValue(pinData)}
+							placeholder={button.name}
+							menuPortalTarget={document.body}
+							menuPosition="fixed"
+							className="pin-layout-select"
+							styles={{
+								control: (base) => ({
+									...base,
+									minHeight: 36,
+									backgroundColor: '#fff',
+									borderColor: '#212529',
+									boxShadow: 'none',
+									color: '#111',
+								}),
+								singleValue: (base) => ({
+									...base,
+									color: '#111',
+									fontWeight: 700,
+									fontSize: 13,
+								}),
+								multiValue: (base) => ({
+									...base,
+									backgroundColor: '#e9ecef',
+									maxWidth: '100%',
+								}),
+								multiValueLabel: (base) => ({
+									...base,
+									color: '#111',
+									fontWeight: 700,
+									fontSize: 13,
+								}),
+								placeholder: (base) => ({
+									...base,
+									color: '#495057',
+									fontWeight: 600,
+								}),
+								indicatorsContainer: (base) => ({
+									...base,
+									color: '#212529',
+								}),
+							}}
+						/>
+						<div className="pin-layout-board__pin">GP{button.pin}</div>
 					</div>
-					<CustomSelect
-						isClearable
-						isMulti={!isDisabled(pinData.action)}
-						options={groupedOptions}
-						isDisabled={isDisabled(pinData.action)}
-						getOptionLabel={getOptionLabel}
-						onChange={onChange(pin)}
-						value={getMultiValue(pinData)}
-					/>
-				</div>
-			))}
+				);
+			})}
+			<p className="text-muted small mt-2 mb-0">
+				Turbo、FN、A2、A1、S1、S2 已锁定，不能修改。
+			</p>
 		</div>
 	);
 });
@@ -298,17 +418,19 @@ const PinSection = memo(function PinSection({
 
 	const [saveMessage, setSaveMessage] = useState('');
 
+	const fetchProfiles = useProfilesStore((state) => state.fetchProfiles);
 	const handleSubmit = useCallback(async (e: FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
 		e.stopPropagation();
 		try {
 			await saveProfiles();
+			await fetchProfiles();
 			updateUsedPins();
 			setSaveMessage(t('Common:saved-success-message'));
 		} catch (error) {
 			setSaveMessage(t('Common:saved-error-message'));
 		}
-	}, []);
+	}, [fetchProfiles, saveProfiles, t, updateUsedPins]);
 
 	useEffect(() => {
 		async function getActiveProfile() {
@@ -378,24 +500,20 @@ const PinSection = memo(function PinSection({
 					<div className="d-flex gap-3 my-3">
 						<CaptureButton
 							labels={Object.values(buttonNames)}
-							onChange={(label, pin) =>
-								setProfilePin(
-									profileIndex,
-									// Convert getHeldPins format to setPinMappings format
-									pin < 10 ? `pin0${pin}` : `pin${pin}`,
-									{
-										// Maps current mode buttons to actions
-										action:
-											BUTTON_ACTIONS[
-												`BUTTON_PRESS_${invert(buttonNames)[
-													label
-												].toUpperCase()}` as PinActionKeys
-											],
-										customButtonMask: 0,
-										customDpadMask: 0,
-									},
-								)
-							}
+							onChange={(label, pin) => {
+								const key = pin < 10 ? `pin0${pin}` : `pin${pin}`;
+								if (LOCKED_PIN_KEYS.has(key)) return;
+								setProfilePin(profileIndex, key, {
+									action:
+										BUTTON_ACTIONS[
+											`BUTTON_PRESS_${invert(buttonNames)[
+												label
+											].toUpperCase()}` as PinActionKeys
+										],
+									customButtonMask: 0,
+									customDpadMask: 0,
+								});
+							}}
 						/>
 						{profileIndex > 0 && (
 							<Button onClick={() => copyBaseProfile(profileIndex)}>

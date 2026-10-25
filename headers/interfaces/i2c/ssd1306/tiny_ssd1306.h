@@ -46,6 +46,19 @@ class GPGFX_TinySSD1306 : public GPGFX_DisplayBase {
 
         bool isSPI() { return this->_isSPI; }
         bool isI2C() { return this->_isI2C; }
+    protected:
+        void sendCommand(uint8_t command);
+        void sendCommands(uint8_t* commands, uint16_t length);
+
+        static const uint16_t MAX_SCREEN_WIDTH = 128;
+        static const uint16_t MAX_SCREEN_HEIGHT = 64;
+        static const uint16_t MAX_SCREEN_SIZE = (MAX_SCREEN_WIDTH * MAX_SCREEN_HEIGHT / 8);
+
+        GPGFX_DisplayTypeOptions _options;
+        uint8_t frameBuffer[MAX_SCREEN_SIZE];
+        uint8_t framePage = 0;
+        uint8_t screenType;
+        bool _isPowered = false;
     private:
         typedef enum {
             SET_LOW_COLUMN = 0x00,
@@ -83,21 +96,6 @@ class GPGFX_TinySSD1306 : public GPGFX_DisplayBase {
             SCREEN_132x64 = 8,
         } ScreenAlternatives;
 
-        bool _isPowered = false;
-
-        static const uint16_t MAX_SCREEN_WIDTH = 128;
-        static const uint16_t MAX_SCREEN_HEIGHT = 64;
-        static const uint16_t MAX_SCREEN_SIZE = (MAX_SCREEN_WIDTH * MAX_SCREEN_HEIGHT / 8);
-
-        GPGFX_DisplayTypeOptions _options;
-
-        void sendCommand(uint8_t command);
-        void sendCommands(uint8_t* commands, uint16_t length);
-
-        uint8_t frameBuffer[MAX_SCREEN_SIZE];
-        uint8_t framePage = 0;
-
-        uint8_t screenType;
         bool _isSPI = false;
         bool _isI2C = true;
 

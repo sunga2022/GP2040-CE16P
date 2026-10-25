@@ -8,6 +8,8 @@ export default {
 	'github-label': 'GitHub',
 	'home-label': '首页',
 	'led-config-label': 'LED 配置',
+	'rgb-label': 'RGB',
+	'rgb-effects-label': '灯效',
 	'links-label': '链接',
 	'macro-label': '宏配置',
 	'pin-mapping-label': 'GPIO 引脚映射',

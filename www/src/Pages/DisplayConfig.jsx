@@ -259,7 +259,7 @@ export default function DisplayConfigPage() {
 								<Trans ns="DisplayConfig" i18nKey="list-text">
 									<li>Monochrome display with 128x64 resolution</li>
 									<li>
-										Uses I2C with a SSD1306, SH1106, SH1107 or other compatible
+										Uses I2C with a SSD1315, SSD1306, SH1106, SH1107 or other compatible
 										display IC
 									</li>
 									<li>Supports 3.3v operation</li>

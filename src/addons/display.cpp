@@ -21,7 +21,10 @@ bool DisplayAddon::available() {
 
     // create the gfx interface
     gpDisplay = new GPGFX();
-    gpOptions = gpDisplay->getAvailableDisplay(GPGFX_DisplayType::DISPLAY_TYPE_NONE);
+    gpOptions = gpDisplay->getAvailableDisplay(GPGFX_DisplayType::DISPLAY_TYPE_SSD1315);
+    if (gpOptions.displayType == GPGFX_DisplayType::DISPLAY_TYPE_NONE) {
+        gpOptions = gpDisplay->getAvailableDisplay(GPGFX_DisplayType::DISPLAY_TYPE_NONE);
+    }
     if ( gpOptions.displayType != GPGFX_DisplayType::DISPLAY_TYPE_NONE ) {
         if ( options.enabled ) {
             result = true;
@@ -69,6 +72,7 @@ void DisplayAddon::setup() {
     displaySaverMode = options.displaySaverMode;
 
     prevValues = Storage::getInstance().GetGamepad()->debouncedGpio;
+    nextDrawTime = make_timeout_time_ms(0);
 
     // set current display mode
     if (!configMode) {
@@ -203,6 +207,10 @@ void DisplayAddon::process() {
         return;
     }
 
+    // Leave Core1 time for RGB turbo flashes (I2C redraw is ~20ms).
+    if (nextDisplayMode == currDisplayMode && !time_reached(nextDrawTime))
+        return;
+
     // Core0 requested a new display mode
     if (nextDisplayMode != currDisplayMode ) {
         currDisplayMode = nextDisplayMode;
@@ -232,6 +240,9 @@ void DisplayAddon::process() {
             updateDisplayScreen();
         }
     }
+
+    const bool turboBusy = Storage::getInstance().GetGamepad()->turboState.buttons != 0;
+    nextDrawTime = make_timeout_time_ms(turboBusy ? 40 : 16);
 }
 
 const DisplayOptions& DisplayAddon::getDisplayOptions() {

@@ -84,31 +84,18 @@ const Navigation = () => {
 						<NavDropdown.Item
 							as={NavLink}
 							eventKey={eventKey++}
-							to="/led-config"
-						>
-							{t('Navigation:led-config-label')}
-						</NavDropdown.Item>
-						<NavDropdown.Item
-							as={NavLink}
-							eventKey={eventKey++}
-							to="/custom-theme"
-						>
-							{t('Navigation:custom-theme-label')}
-						</NavDropdown.Item>
-						<NavDropdown.Item
-							as={NavLink}
-							eventKey={eventKey++}
 							to="/display-config"
 						>
 							{t('Navigation:display-config-label')}
 						</NavDropdown.Item>
-						<NavDropdown.Item as={NavLink} eventKey={eventKey++} to="/add-ons">
-							{t('Navigation:add-ons-label')}
-						</NavDropdown.Item>
 						<NavDropdown.Item as={NavLink} eventKey={eventKey++} to="/macro">
 							{t('Navigation:macro-label')}
 						</NavDropdown.Item>
-						<NavDropdown.Item as={NavLink} eventKey={eventKey++} to="/backup">
+						<NavDropdown.Item
+							as={NavLink}
+							eventKey={eventKey++}
+							to="/backup"
+						>
 							{t('Navigation:backup-label')}
 						</NavDropdown.Item>
 						<NavDropdown.Item
@@ -119,6 +106,25 @@ const Navigation = () => {
 							<span className="reset-settings-link">
 								{t('Navigation:resetSettings-label')}
 							</span>
+						</NavDropdown.Item>
+					</NavDropdown>
+					<NavDropdown title={t('Navigation:rgb-label')}>
+						<NavDropdown.Item as={NavLink} eventKey={eventKey++} to="/rgb">
+							{t('Navigation:rgb-effects-label')}
+						</NavDropdown.Item>
+						<NavDropdown.Item
+							as={NavLink}
+							eventKey={eventKey++}
+							to="/led-config"
+						>
+							{t('Navigation:led-config-label')}
+						</NavDropdown.Item>
+						<NavDropdown.Item
+							as={NavLink}
+							eventKey={eventKey++}
+							to="/custom-theme"
+						>
+							{t('Navigation:custom-theme-label')}
 						</NavDropdown.Item>
 					</NavDropdown>
 					<NavDropdown title={t('Navigation:links-label')}>

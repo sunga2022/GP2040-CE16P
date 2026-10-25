@@ -1,7 +1,7 @@
 export default {
 	'header-text': '显示屏配置',
 	'sub-header-text': '可使用单色显示屏来显示控制器状态和按钮活动。请确保您的显示模块具有以下特性：',
-	'list-text': '<1>128x64分辨率的单色显示屏</1> <1>使用I2C通信，兼容SSD1306、SH1106、SH1107或其他兼容的显示IC</1> <1>支持3.3v工作电压</1>',
+	'list-text': '<1>128x64分辨率的单色显示屏</1> <1>使用I2C通信，Pico16N 为 SSD1315，也兼容 SSD1306、SH1106、SH1107</1> <1>支持3.3v工作电压</1>',
 	section: {
 		'hardware-header': '硬件选项',
 		'screen-header': '屏幕选项',

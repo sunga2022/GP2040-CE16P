@@ -6,8 +6,16 @@
 #include "peripheralmanager.h"
 #include "obd_ssd1306.h"
 #include "tiny_ssd1306.h"
+#include "tiny_ssd1315.h"
 
 std::map<GPGFX_DisplayType, std::map<GPGFX_DisplaySize, GPGFX_DisplayMetrics>> GPGFX_DisplayModes = {
+    {
+        {DISPLAY_TYPE_SSD1315},
+        {
+            {SIZE_128x32,{128,32,1}},
+            {SIZE_128x64,{128,64,1}},
+        },
+    },
     {
         {DISPLAY_TYPE_SSD1306},
         {
@@ -23,6 +31,9 @@ GPGFX::GPGFX() {
 
 void GPGFX::init(GPGFX_DisplayTypeOptions options) {
     switch (options.displayType) {
+        case GPGFX_DisplayType::DISPLAY_TYPE_SSD1315:
+            this->displayDriver = new GPGFX_TinySSD1315();
+            break;
         case GPGFX_DisplayType::DISPLAY_TYPE_SSD1306:
             this->displayDriver = new GPGFX_TinySSD1306();
             break;
@@ -57,7 +68,9 @@ GPGFX_DisplayTypeOptions GPGFX::getAvailableDisplay(GPGFX_DisplayType displayTyp
 bool GPGFX::detectDisplay(GPGFX_DisplayTypeOptions* display, GPGFX_DisplayType displayType) {
     GPGFX_DisplayBase* driver = nullptr;
 
-    if (displayType == GPGFX_DisplayType::DISPLAY_TYPE_SSD1306) {
+    if (displayType == GPGFX_DisplayType::DISPLAY_TYPE_SSD1315) {
+        driver = new GPGFX_TinySSD1315();
+    } else if (displayType == GPGFX_DisplayType::DISPLAY_TYPE_SSD1306) {
         driver = new GPGFX_TinySSD1306();
     } else {
         driver = nullptr;

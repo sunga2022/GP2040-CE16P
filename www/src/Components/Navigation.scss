@@ -43,6 +43,10 @@ nav.navbar {
 	margin: 0.25rem 0rem 0.25rem $nav-outer-margin;
 }
 
+[data-bs-theme="dark"] .title-logo {
+	filter: invert(1);
+}
+
 @media (max-width: 767.98px) {
 	nav.navbar {
 		.navbar-actions {

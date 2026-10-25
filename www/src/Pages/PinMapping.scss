@@ -1,13 +1,118 @@
-.pin-grid {
-	display: grid;
-	grid-auto-flow: column;
-	grid-template-columns: 1fr 1fr;
-	grid-template-rows: repeat(15, auto);
+.pin-layout-board {
+	position: relative;
+	width: 100%;
+	margin-top: 0.75rem;
+}
+
+.pin-layout-board__image {
+	display: block;
+	width: 100%;
+	height: auto;
+	border-radius: 8px;
+	user-select: none;
+}
+
+.pin-layout-board__slot {
+	position: absolute;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	transform: translate(-50%, -42%);
+	width: 11.5%;
+	min-width: 104px;
+	z-index: 2;
+}
+
+.pin-layout-board__slot.is-large {
+	width: 13.5%;
+	min-width: 118px;
+}
+
+.pin-layout-select {
+	width: 100%;
+}
+
+.pin-layout-select .react-select__control {
+	min-height: 36px;
+	font-size: 13px;
+	font-weight: 700;
+	color: #111;
+	background-color: #fff;
+	border: 1px solid #212529;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+}
+
+.pin-layout-select .react-select__value-container {
+	padding: 2px 6px;
+	flex-wrap: nowrap;
+	overflow: hidden;
+}
+
+.pin-layout-select__value {
+	overflow: hidden;
+	color: #111;
+	font-size: 13px;
+	font-weight: 700;
+	line-height: 1.2;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+.pin-layout-select .react-select__multi-value,
+.pin-layout-select .react-select__single-value {
+	display: none;
+}
+
+.pin-layout-select .react-select__single-value,
+.pin-layout-select .react-select__multi-value__label,
+.pin-layout-select .react-select__input-container {
+	margin: 0;
+	padding: 0;
+	max-width: 0;
+	color: #111;
+}
+
+.pin-layout-select .react-select__indicators {
+	padding: 0;
+	color: #212529;
+}
+
+.pin-layout-select .react-select__dropdown-indicator,
+.pin-layout-select .react-select__clear-indicator {
+	padding: 4px;
+	color: #212529;
+}
+
+.pin-layout-board__pin {
+	margin-top: 3px;
+	padding: 1px 7px;
+	color: #111;
+	font-size: 12px;
+	font-weight: 800;
+	letter-spacing: 0.02em;
+	background: #ffd54f;
+	border: 1px solid #212529;
+	border-radius: 3px;
+}
+
+.react-select__menu-portal {
+	z-index: 2000 !important;
+}
+
+.react-select__menu-portal .react-select__option {
+	color: #111;
+	font-size: 13px;
 }
 
 @media only screen and (max-width: 680px) {
-	.pin-grid {
-		display: flex;
-		flex-direction: column;
+	.pin-layout-board__slot,
+	.pin-layout-board__slot.is-large {
+		min-width: 86px;
+		width: 16%;
+	}
+
+	.pin-layout-select .react-select__control,
+	.pin-layout-board__pin {
+		font-size: 11px;
 	}
 }

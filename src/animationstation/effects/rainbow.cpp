@@ -1,5 +1,8 @@
 #include "rainbow.h"
+#include "fxutil.h"
 #include "storagemanager.h"
+#include <algorithm>
+#include <math.h>
 
 Rainbow::Rainbow(PixelMatrix &matrix) : Animation(matrix) {
 }
@@ -12,43 +15,40 @@ bool Rainbow::Animate(RGB (&frame)[100]) {
   UpdateTime();
   UpdatePresses(frame);
 
+  // Slow seven-color gradient + breathing. Hue crawl is very slow so the
+  // pad stays a rainbow, not a racing wave.
+  const float t = getMillis() * 0.001f;
+  const float breath = fxSmooth01((sinf(t * 0.70f) + 1.0f) * 0.5f);
+  const float bri = 0.16f + 0.84f * breath;
+  const float hueDrift = t * 0.018f;
+
+  int total = 0;
+  for (auto &col : matrix->pixels)
+    for (auto &pixel : col)
+      if (pixel.index != NO_PIXEL.index)
+        total++;
+
   for (auto &col : matrix->pixels) {
     for (auto &pixel : col) {
       if (pixel.index == NO_PIXEL.index)
         continue;
 
-      // Count down the timer
       DecrementFadeCounter(pixel.index);
 
-      RGB color = RGB::wheel(this->currentFrame);
+      uint8_t ledIndex = pixel.positions.empty() ? 0 : pixel.positions[0];
+      float x, y;
+      fxLedXY(ledIndex, total, x, y);
+      RGB color = fxHsv(x * 0.86f + y * 0.10f + hueDrift, 1.0f, bri);
+
       for (auto &pos : pixel.positions)
         frame[pos] = BlendColor(hitColor[pixel.index], color, times[pixel.index]);
     }
   }
 
-  if (reverse) {
-    currentFrame--;
-
-    if (currentFrame < 0) {
-      currentFrame = 1;
-      reverse = false;
-    }
-  } else {
-    currentFrame++;
-
-    if (currentFrame > 255) {
-      currentFrame = 254;
-      reverse = true;
-    }
-  }
-
-  AnimationOptions & animationOptions = Storage::getInstance().getAnimationOptions();
-  this->nextRunTime = make_timeout_time_ms(animationOptions.rainbowCycleTime);
-
+  this->nextRunTime = make_timeout_time_ms(20);
   return true;
 }
 
-// clamp rainbowCycleTime to [1 ... INT16_MAX]
 #define RAINBOW_CYCLE_INCREMENT   10
 #define RAINBOW_CYCLE_MAX         INT16_MAX - RAINBOW_CYCLE_INCREMENT
 #define RAINBOW_CYCLE_MIN         1         + RAINBOW_CYCLE_INCREMENT

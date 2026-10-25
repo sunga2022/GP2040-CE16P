@@ -16,11 +16,8 @@ AnimationStation::AnimationStation() {
     brightnessX = 0;
     linkageModeOfBrightnessX = 0;
     nextChange = nil_time;
-    effectCount = TOTAL_EFFECTS;
-    AnimationOptions & animationOptions = Storage::getInstance().getAnimationOptions();
-    if (animationOptions.hasCustomTheme) {
-        effectCount++; // increase our effect count
-    }
+    // 30 pad effects, then one per-button custom slot.
+    effectCount = TOTAL_EFFECTS + 1;
 }
 
 void AnimationStation::ConfigureBrightness(uint8_t max, uint8_t steps) {
@@ -168,8 +165,6 @@ uint8_t AnimationStation::GetBrightness() {
 void AnimationStation::SetMode(uint8_t mode) {
   AnimationOptions & animationOptions = Storage::getInstance().getAnimationOptions();
   animationOptions.baseAnimationIndex = mode;
-  AnimationEffects newEffect =
-      static_cast<AnimationEffects>(animationOptions.baseAnimationIndex);
 
   if (this->baseAnimation != nullptr) {
     delete this->baseAnimation;
@@ -180,28 +175,17 @@ void AnimationStation::SetMode(uint8_t mode) {
 
   this->Clear();
 
-  switch (newEffect) {
-  case AnimationEffects::EFFECT_RAINBOW:
-    this->baseAnimation = new Rainbow(matrix);
-    this->buttonAnimation = new StaticColor(matrix, lastPressed);
-    break;
-  case AnimationEffects::EFFECT_CHASE:
-    this->baseAnimation = new Chase(matrix);
-    this->buttonAnimation = new StaticColor(matrix, lastPressed);
-    break;
-  case AnimationEffects::EFFECT_STATIC_THEME:
-    this->baseAnimation = new StaticTheme(matrix);
-    this->buttonAnimation = new StaticColor(matrix, lastPressed);
-    break;
-  case AnimationEffects::EFFECT_CUSTOM_THEME:
+  // Per-button custom theme sits after the 30 pad effects.
+  const uint8_t customIndex = EXTRA_EFFECT_COUNT;
+  if (mode == customIndex) {
     this->baseAnimation = new CustomTheme(matrix);
     this->buttonAnimation = new CustomThemePressed(matrix, lastPressed);
-    break;
-  default:
-    this->baseAnimation = new StaticColor(matrix);
-    this->buttonAnimation = new StaticColor(matrix, lastPressed);
-    break;
+    return;
   }
+
+  const uint8_t extraId = (mode < EXTRA_EFFECT_COUNT) ? mode : 0;
+  this->baseAnimation = new ExtraEffect(matrix, extraId);
+  this->buttonAnimation = new StaticColor(matrix, lastPressed);
 }
 
 void AnimationStation::SetMatrix(PixelMatrix matrix) {

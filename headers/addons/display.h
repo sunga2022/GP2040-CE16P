@@ -9,6 +9,7 @@
 #include <map>
 #include <string>
 #include <hardware/i2c.h>
+#include "pico/time.h"
 #include "BoardConfig.h"
 #include "GPGFX.h"
 #include "GPGFX_UI.h"
@@ -250,6 +251,7 @@ private:
     GamepadButtonMapping *mapMenuToggle;
     GamepadButtonMapping *mapMenuSelect;
     std::string errorMessage;
+    absolute_time_t nextDrawTime;
 };
 
 #endif

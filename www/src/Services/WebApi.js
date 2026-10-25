@@ -332,15 +332,22 @@ async function getCustomTheme(setLoading) {
 		const response = await Http.get(`${baseUrl}/api/getCustomTheme`);
 		setLoading(false);
 
-		let data = { hasCustomTheme: response.data.enabled, customTheme: {} };
+		let data = {
+			hasCustomTheme: response.data.enabled,
+			baseAnimationIndex: Number(response.data.baseAnimationIndex ?? 0),
+			customTheme: {},
+		};
 
-		// Transform ARGB int value to hex for easy use on frontend
+		// Transform ARGB int value to hex for easy use on frontend.
+		// Idle effect id is stored in the high nibble of the normal color.
 		Object.keys(response.data)
-			.filter((p) => p !== 'enabled')
+			.filter((p) => p !== 'enabled' && p !== 'baseAnimationIndex' && p !== 'buttonPressColorCooldownTimeInMs')
 			.forEach((button) => {
+				const packed = Number(response.data[button].u) >>> 0;
 				data.customTheme[button] = {
-					normal: rgbIntToHex(response.data[button].u),
+					normal: rgbIntToHex(packed),
 					pressed: rgbIntToHex(response.data[button].d),
+					effect: (packed >>> 24) & 0x0f,
 				};
 			});
 
@@ -354,12 +361,21 @@ async function getCustomTheme(setLoading) {
 
 async function setCustomTheme(customThemeOptions) {
 	let options = { enabled: customThemeOptions.hasCustomTheme };
+	if (customThemeOptions.baseAnimationIndex !== undefined) {
+		options.baseAnimationIndex = customThemeOptions.baseAnimationIndex;
+	}
 
-	// Transform RGB hex values to ARGB int before sending back to API
+	// Transform RGB hex values to ARGB int before sending back to API.
+	// Per-button effect rides in the high byte of the idle color.
 	Object.keys(customThemeOptions.customTheme).forEach((p) => {
+		const entry = customThemeOptions.customTheme[p];
+		if (!entry || typeof entry.normal !== 'string') return;
+		const effect = Number(entry.effect ?? 0) & 0x0f;
 		options[p] = {
-			u: hexToInt(customThemeOptions.customTheme[p].normal.replace('#', '')),
-			d: hexToInt(customThemeOptions.customTheme[p].pressed.replace('#', '')),
+			u:
+				((effect << 24) >>> 0) |
+				(hexToInt(entry.normal.replace('#', '')) & 0xffffff),
+			d: hexToInt(String(entry.pressed || '000000').replace('#', '')) & 0xffffff,
 		};
 	});
 

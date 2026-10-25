@@ -11,10 +11,13 @@
 #include "playerleds.h"
 #include "gp2040.h"
 #include "addons/neopicoleds.h"
+#include "turboshot.h"
 #include "addons/pleds.h"
 #include "usbdriver.h"
 #include "enums.h"
 #include "helper.h"
+#include "hardware/gpio.h"
+#include <string>
 
 #define FRAME_MAX 100
 #define AL_ROW	5
@@ -546,13 +549,36 @@ void NeoPicoLEDAddon::process() {
         as.HandleEvent(action);
     }
 
+    // Web config writes baseAnimationIndex without rebuilding the animation.
+    {
+        static int lastMode = -1;
+        const int mode = (int)Storage::getInstance().getAnimationOptions().baseAnimationIndex;
+        if (mode != lastMode) {
+            lastMode = mode;
+            as.SetMode((uint8_t)mode);
+        }
+    }
+
     uint32_t buttonState = gamepad->state.dpad << 16 | gamepad->state.buttons;
+    uint32_t turboButtons = Storage::getInstance().GetGamepad()->turboState.buttons;
+    const bool shotPulseOn = turboButtons ? turboShotPulseOn() : false;
+    bool turboHeld = false;
     vector<Pixel> pressed;
     for (auto row : matrix.pixels)
     {
         for (auto pixel : row)
         {
-            if (buttonState & pixel.mask)
+            if (pixel.index == NO_PIXEL.index)
+                continue;
+            bool isPressed = (pixel.gpio >= 0)
+                ? (gpio_get(pixel.gpio) == 0)
+                : (buttonState & pixel.mask);
+            // GPIO lighting stays solid while held; flash at shotCount (T30 = 30 Hz).
+            if (isPressed && pixel.gpio >= 0 && (turboButtons & pixel.mask)) {
+                turboHeld = true;
+                isPressed = shotPulseOn;
+            }
+            if (isPressed)
                 pressed.push_back(pixel);
         }
     }
@@ -572,6 +598,28 @@ void NeoPicoLEDAddon::process() {
 
 	// Copy Animation Station to NeoPico w/ Brightness Modification
     as.ApplyBrightness(&frame[0]);
+
+    // Breathing/theme keeps LEDs on while held. Drive on/off from shotCount.
+    if (turboButtons) {
+        for (auto row : matrix.pixels) {
+            for (auto pixel : row) {
+                if (pixel.index == NO_PIXEL.index || pixel.gpio < 0)
+                    continue;
+                if (!(turboButtons & pixel.mask))
+                    continue;
+                if (gpio_get(pixel.gpio) != 0)
+                    continue;
+                for (uint8_t pos : pixel.positions) {
+                    if (pos >= 100)
+                        continue;
+                    if (!shotPulseOn)
+                        frame[pos] = 0;
+                    else if (frame[pos] == 0)
+                        frame[pos] = ((RGB)ColorWhite).value(neopico.GetFormat(), as.GetBrightnessX());
+                }
+            }
+        }
+    }
 
     // Apply the player LEDs to our first 4 leds if we're in NEOPIXEL mode
     if (ledOptions.pledType == PLED_TYPE_RGB) {
@@ -614,7 +662,7 @@ void NeoPicoLEDAddon::process() {
 
     neopico.SetFrame(frame);
     neopico.Show();
-    this->nextRunTime = make_timeout_time_ms(intervalMS);
+    this->nextRunTime = make_timeout_time_ms(turboHeld ? 3 : intervalMS);
 }
 
 std::vector<uint8_t> * NeoPicoLEDAddon::getLEDPositions(string button, std::vector<std::vector<uint8_t>> *positions)
@@ -626,9 +674,87 @@ std::vector<uint8_t> * NeoPicoLEDAddon::getLEDPositions(string button, std::vect
         return &positions->at(buttonPosition);
 }
 
-// Macro for Pixel() declarations
+#ifndef LEDS_GPIO_UP
+#define LEDS_GPIO_UP -1
+#endif
+#ifndef LEDS_GPIO_DOWN
+#define LEDS_GPIO_DOWN -1
+#endif
+#ifndef LEDS_GPIO_LEFT
+#define LEDS_GPIO_LEFT -1
+#endif
+#ifndef LEDS_GPIO_RIGHT
+#define LEDS_GPIO_RIGHT -1
+#endif
+#ifndef LEDS_GPIO_B1
+#define LEDS_GPIO_B1 -1
+#endif
+#ifndef LEDS_GPIO_B2
+#define LEDS_GPIO_B2 -1
+#endif
+#ifndef LEDS_GPIO_B3
+#define LEDS_GPIO_B3 -1
+#endif
+#ifndef LEDS_GPIO_B4
+#define LEDS_GPIO_B4 -1
+#endif
+#ifndef LEDS_GPIO_L1
+#define LEDS_GPIO_L1 -1
+#endif
+#ifndef LEDS_GPIO_R1
+#define LEDS_GPIO_R1 -1
+#endif
+#ifndef LEDS_GPIO_L2
+#define LEDS_GPIO_L2 -1
+#endif
+#ifndef LEDS_GPIO_R2
+#define LEDS_GPIO_R2 -1
+#endif
+#ifndef LEDS_GPIO_S1
+#define LEDS_GPIO_S1 -1
+#endif
+#ifndef LEDS_GPIO_S2
+#define LEDS_GPIO_S2 -1
+#endif
+#ifndef LEDS_GPIO_L3
+#define LEDS_GPIO_L3 -1
+#endif
+#ifndef LEDS_GPIO_R3
+#define LEDS_GPIO_R3 -1
+#endif
+#ifndef LEDS_GPIO_A1
+#define LEDS_GPIO_A1 -1
+#endif
+#ifndef LEDS_GPIO_A2
+#define LEDS_GPIO_A2 -1
+#endif
+
+static int8_t ledGpioFor(const std::string& button)
+{
+    if (button == BUTTON_LABEL_UP) return LEDS_GPIO_UP;
+    if (button == BUTTON_LABEL_DOWN) return LEDS_GPIO_DOWN;
+    if (button == BUTTON_LABEL_LEFT) return LEDS_GPIO_LEFT;
+    if (button == BUTTON_LABEL_RIGHT) return LEDS_GPIO_RIGHT;
+    if (button == BUTTON_LABEL_B1) return LEDS_GPIO_B1;
+    if (button == BUTTON_LABEL_B2) return LEDS_GPIO_B2;
+    if (button == BUTTON_LABEL_B3) return LEDS_GPIO_B3;
+    if (button == BUTTON_LABEL_B4) return LEDS_GPIO_B4;
+    if (button == BUTTON_LABEL_L1) return LEDS_GPIO_L1;
+    if (button == BUTTON_LABEL_R1) return LEDS_GPIO_R1;
+    if (button == BUTTON_LABEL_L2) return LEDS_GPIO_L2;
+    if (button == BUTTON_LABEL_R2) return LEDS_GPIO_R2;
+    if (button == BUTTON_LABEL_S1) return LEDS_GPIO_S1;
+    if (button == BUTTON_LABEL_S2) return LEDS_GPIO_S2;
+    if (button == BUTTON_LABEL_L3) return LEDS_GPIO_L3;
+    if (button == BUTTON_LABEL_R3) return LEDS_GPIO_R3;
+    if (button == BUTTON_LABEL_A1) return LEDS_GPIO_A1;
+    if (button == BUTTON_LABEL_A2) return LEDS_GPIO_A2;
+    return -1;
+}
+
+// Macro for Pixel() declarations. gpio follows the physical pad, not remapped keys.
 #define PIXEL(BUTTON, MASK) \
-    Pixel(buttonPositions[BUTTON], MASK, *getLEDPositions(BUTTON, positions))
+    Pixel(buttonPositions[BUTTON], MASK, *getLEDPositions(BUTTON, positions), ledGpioFor(BUTTON))
 
 /**
  * @brief Create an LED layout using a 2x4 matrix.

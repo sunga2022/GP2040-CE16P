@@ -46,6 +46,36 @@ const static uint32_t rebootDelayMs = 500;
 static string http_post_uri;
 static char http_post_payload[LWIP_HTTPD_POST_MAX_PAYLOAD_LEN];
 static uint16_t http_post_payload_len = 0;
+static volatile bool http_post_busy = false;
+static bool last_post_parse_ok = false;
+
+static std::string json_save_error(const char* message)
+{
+    DynamicJsonDocument doc(192);
+    doc["success"] = false;
+    doc["error"] = message;
+    std::string data;
+    serializeJson(doc, data);
+    return data;
+}
+
+static bool applyPinFromJson(GpioMappingInfo& pin, JsonVariantConst pinVar)
+{
+    JsonObjectConst pinObj = pinVar.as<JsonObjectConst>();
+    if (pinObj.isNull() || !pinObj.containsKey("action"))
+        return false;
+
+    const GpioAction incoming = (GpioAction)(int)pinObj["action"];
+    if (pin.action == GpioAction::RESERVED || pin.action == GpioAction::ASSIGNED_TO_ADDON)
+        return false;
+    if (incoming == GpioAction::RESERVED || incoming == GpioAction::ASSIGNED_TO_ADDON)
+        return false;
+
+    pin.action = incoming;
+    pin.customButtonMask = (uint32_t)pinObj["customButtonMask"];
+    pin.customDpadMask = (uint32_t)pinObj["customDpadMask"];
+    return true;
+}
 
 // Don't inline this function, we do not want to consume stack space in the calling function
 template <typename T, typename K>
@@ -275,7 +305,9 @@ int set_file_data(fs_file *file, string&& data)
 DynamicJsonDocument get_post_data()
 {
     DynamicJsonDocument doc(LWIP_HTTPD_POST_MAX_PAYLOAD_LEN);
-    deserializeJson(doc, http_post_payload, http_post_payload_len);
+    const DeserializationError err = deserializeJson(doc, http_post_payload, http_post_payload_len);
+    last_post_parse_ok = (err == DeserializationError::Ok) && !doc.overflowed();
+    http_post_busy = false;
     return doc;
 }
 
@@ -338,6 +370,13 @@ err_t httpd_post_begin(void *connection, const char *uri, const char *http_reque
         return ERR_ARG;
     }
 
+    // One global POST buffer: reject overlapping requests so pin-map saves
+    // cannot parse a different endpoint's JSON and wipe GPIOs to NONE.
+    if (http_post_busy) {
+        return ERR_ARG;
+    }
+    http_post_busy = true;
+
     http_post_uri = uri;
     http_post_payload_len = 0;
     memset(http_post_payload, 0, LWIP_HTTPD_POST_MAX_PAYLOAD_LEN);
@@ -385,6 +424,8 @@ void httpd_post_finished(void *connection, char *response_uri, uint16_t response
     if (http_post_payload_len != 0xffff) {
         strncpy(response_uri, http_post_uri.c_str(), response_uri_len);
         response_uri[response_uri_len - 1] = '\0';
+    } else {
+        http_post_busy = false;
     }
 }
 
@@ -547,6 +588,9 @@ std::string setSplashImage()
 std::string setProfileOptions()
 {
     DynamicJsonDocument doc = get_post_data();
+    if (!last_post_parse_ok || !doc.containsKey("alternativePinMappings")) {
+        return json_save_error("invalid profile payload");
+    }
 
     ProfileOptions& profileOptions = Storage::getInstance().getProfileOptions();
     GpioMappings& coreMappings = Storage::getInstance().getGpioMappings();
@@ -557,15 +601,12 @@ std::string setProfileOptions()
     for (JsonObject alt : alts) {
         for (Pin_t pin = 0; pin < (Pin_t)NUM_BANK0_GPIOS; pin++) {
             snprintf(pinName, 6, "pin%0*d", 2, pin);
+            if (!alt.containsKey(pinName))
+                continue;
             // setting a pin shouldn't change a new existing addon/reserved pin
             // but if the profile definition is new, we should still capture the addon/reserved state
-            if (profileOptions.gpioMappingsSets[altsIndex].pins[pin].action != GpioAction::ASSIGNED_TO_ADDON &&
-                    profileOptions.gpioMappingsSets[altsIndex].pins[pin].action != GpioAction::RESERVED &&
-                    (GpioAction)alt[pinName]["action"] != GpioAction::RESERVED &&
-                    (GpioAction)alt[pinName]["action"] != GpioAction::ASSIGNED_TO_ADDON) {
-                profileOptions.gpioMappingsSets[altsIndex].pins[pin].action = (GpioAction)alt[pinName]["action"];
-                profileOptions.gpioMappingsSets[altsIndex].pins[pin].customButtonMask = (uint32_t)alt[pinName]["customButtonMask"];
-                profileOptions.gpioMappingsSets[altsIndex].pins[pin].customDpadMask = (uint32_t)alt[pinName]["customDpadMask"];
+            if (applyPinFromJson(profileOptions.gpioMappingsSets[altsIndex].pins[pin], alt[pinName])) {
+                continue;
             } else if ((coreMappings.pins[pin].action == GpioAction::RESERVED &&
                         (GpioAction)alt[pinName]["action"] == GpioAction::RESERVED) ||
                     (coreMappings.pins[pin].action == GpioAction::ASSIGNED_TO_ADDON &&
@@ -576,22 +617,26 @@ std::string setProfileOptions()
         profileOptions.gpioMappingsSets[altsIndex].pins_count = NUM_BANK0_GPIOS;
 
         size_t profileLabelSize = sizeof(profileOptions.gpioMappingsSets[altsIndex].profileLabel);
-        strncpy(profileOptions.gpioMappingsSets[altsIndex].profileLabel, alt["profileLabel"], profileLabelSize - 1);
-        profileOptions.gpioMappingsSets[altsIndex].profileLabel[profileLabelSize - 1] = '\0';
-        profileOptions.gpioMappingsSets[altsIndex].enabled = alt["enabled"];
+        if (alt.containsKey("profileLabel") && alt["profileLabel"].is<const char*>()) {
+            strncpy(profileOptions.gpioMappingsSets[altsIndex].profileLabel, alt["profileLabel"], profileLabelSize - 1);
+            profileOptions.gpioMappingsSets[altsIndex].profileLabel[profileLabelSize - 1] = '\0';
+        }
+        if (alt.containsKey("enabled")) {
+            profileOptions.gpioMappingsSets[altsIndex].enabled = alt["enabled"];
+        }
 
         profileOptions.gpioMappingsSets_count = ++altsIndex;
         if (altsIndex > 4) break;
     }
 
     EventManager::getInstance().triggerEvent(new GPStorageSaveEvent(true));
+    doc["success"] = true;
     return serialize_json(doc);
 }
 
 std::string getProfileOptions()
 {
-    const size_t capacity = JSON_OBJECT_SIZE(500);
-    DynamicJsonDocument doc(capacity);
+    DynamicJsonDocument doc(1024 * 24);
 
     const auto writePinDoc = [&](const int item, const char* key, const GpioMappingInfo& value) -> void
     {
@@ -1056,6 +1101,15 @@ std::string setCustomTheme()
     readDoc(pressCooldown, doc, "buttonPressColorCooldownTimeInMs");
     options.buttonPressColorCooldownTimeInMs = pressCooldown;
 
+    if (doc.containsKey("baseAnimationIndex")) {
+        uint32_t mode = 0;
+        readDoc(mode, doc, "baseAnimationIndex");
+        if (mode > 30)
+            mode = 0;
+        options.baseAnimationIndex = mode;
+        options.has_baseAnimationIndex = true;
+    }
+
     EventManager::getInstance().triggerEvent(new GPStorageSaveEvent(true));
     return serialize_json(doc);
 }
@@ -1067,6 +1121,7 @@ std::string getCustomTheme()
     const AnimationOptions& options = Storage::getInstance().getAnimationOptions();
 
     writeDoc(doc, "enabled", options.hasCustomTheme);
+    writeDoc(doc, "baseAnimationIndex", options.baseAnimationIndex);
     writeDoc(doc, "Up", "u", options.customThemeUp);
     writeDoc(doc, "Up", "d", options.customThemeUpPressed);
     writeDoc(doc, "Down", "u", options.customThemeDown);
@@ -1111,36 +1166,46 @@ std::string getCustomTheme()
 std::string setPinMappings()
 {
     DynamicJsonDocument doc = get_post_data();
+    if (!last_post_parse_ok) {
+        return json_save_error("invalid pin-mapping payload");
+    }
 
     GpioMappings& gpioMappings = Storage::getInstance().getGpioMappings();
 
     char pinName[6];
+    int applied = 0;
     for (Pin_t pin = 0; pin < (Pin_t)NUM_BANK0_GPIOS; pin++) {
         snprintf(pinName, 6, "pin%0*d", 2, pin);
-        // setting a pin shouldn't change a new existing addon/reserved pin
-        if (gpioMappings.pins[pin].action != GpioAction::RESERVED &&
-                gpioMappings.pins[pin].action != GpioAction::ASSIGNED_TO_ADDON &&
-                (GpioAction)doc[pinName]["action"] != GpioAction::RESERVED &&
-                (GpioAction)doc[pinName]["action"] != GpioAction::ASSIGNED_TO_ADDON) {
-            gpioMappings.pins[pin].action = (GpioAction)doc[pinName]["action"];
-            gpioMappings.pins[pin].customButtonMask = (uint32_t)doc[pinName]["customButtonMask"];
-            gpioMappings.pins[pin].customDpadMask = (uint32_t)doc[pinName]["customDpadMask"];
-        }
+        if (!doc.containsKey(pinName))
+            continue;
+        if (applyPinFromJson(gpioMappings.pins[pin], doc[pinName]))
+            applied++;
     }
+    // nanopb drops the pins array unless this count is set
+    gpioMappings.pins_count = NUM_BANK0_GPIOS;
+
+    if (applied == 0 && !doc.containsKey("pin00") && !doc.containsKey("pin21")) {
+        return json_save_error("pin-mapping payload missing pins");
+    }
+
     size_t profileLabelSize = sizeof(gpioMappings.profileLabel);
-    strncpy(gpioMappings.profileLabel, doc["profileLabel"], profileLabelSize - 1);
-    gpioMappings.profileLabel[profileLabelSize - 1] = '\0';
-    gpioMappings.enabled = doc["enabled"];
+    if (doc.containsKey("profileLabel") && doc["profileLabel"].is<const char*>()) {
+        strncpy(gpioMappings.profileLabel, doc["profileLabel"], profileLabelSize - 1);
+        gpioMappings.profileLabel[profileLabelSize - 1] = '\0';
+    }
+    if (doc.containsKey("enabled")) {
+        gpioMappings.enabled = doc["enabled"];
+    }
 
     EventManager::getInstance().triggerEvent(new GPStorageSaveEvent(true));
 
+    doc["success"] = true;
     return serialize_json(doc);
 }
 
 std::string getPinMappings()
 {
-    const size_t capacity = JSON_OBJECT_SIZE(500);
-    DynamicJsonDocument doc(capacity);
+    DynamicJsonDocument doc(1024 * 12);
 
     GpioMappings& gpioMappings = Storage::getInstance().getGpioMappings();
 
@@ -2634,7 +2699,9 @@ int fs_open_custom(struct fs_file *file, const char *name)
     {
         if (strcmp(handlerFunc.first, name) == 0)
         {
-            return set_file_data(file, handlerFunc.second());
+            std::string data = handlerFunc.second();
+            http_post_busy = false;
+            return set_file_data(file, std::move(data));
         }
     }
 

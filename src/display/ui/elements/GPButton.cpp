@@ -1,5 +1,6 @@
 #include "GPButton.h"
 #include "GPGFX_UI_layouts.h"
+#include "turboshot.h"
 
 void GPButton::draw() {
     // new style button:
@@ -74,6 +75,8 @@ void GPButton::draw() {
             mapMask = getGamepad()->mapButtonA2;
         }
         turboState = (getGamepad()->turboState.buttons & this->_inputMask);
+        if (turboState && buttonState)
+            buttonState = turboShotPulseOn();
     } else if (_inputType == GP_ELEMENT_DIR_BUTTON) {
         // direction button mask
         buttonState = getProcessedGamepad()->pressedDpad(this->_inputMask);
@@ -93,23 +96,28 @@ void GPButton::draw() {
         pinState = ((pinValues >> this->_inputMask) & 0x01);
         buttonState = true;
 
+        uint32_t turboMask = 0;
         switch (pinMappings[this->_inputMask].action) {
-            case GpioAction::BUTTON_PRESS_B1: turboState |= (getGamepad()->turboState.buttons & GAMEPAD_MASK_B1); break;
-            case GpioAction::BUTTON_PRESS_B2: turboState |= (getGamepad()->turboState.buttons & GAMEPAD_MASK_B2); break;
-            case GpioAction::BUTTON_PRESS_B3: turboState |= (getGamepad()->turboState.buttons & GAMEPAD_MASK_B3); break;
-            case GpioAction::BUTTON_PRESS_B4: turboState |= (getGamepad()->turboState.buttons & GAMEPAD_MASK_B4); break;
-            case GpioAction::BUTTON_PRESS_L1: turboState |= (getGamepad()->turboState.buttons & GAMEPAD_MASK_L1); break;
-            case GpioAction::BUTTON_PRESS_R1: turboState |= (getGamepad()->turboState.buttons & GAMEPAD_MASK_R1); break;
-            case GpioAction::BUTTON_PRESS_L2: turboState |= (getGamepad()->turboState.buttons & GAMEPAD_MASK_L2); break;
-            case GpioAction::BUTTON_PRESS_R2: turboState |= (getGamepad()->turboState.buttons & GAMEPAD_MASK_R2); break;
-            case GpioAction::BUTTON_PRESS_S1: turboState |= (getGamepad()->turboState.buttons & GAMEPAD_MASK_S1); break;
-            case GpioAction::BUTTON_PRESS_S2: turboState |= (getGamepad()->turboState.buttons & GAMEPAD_MASK_S2); break;
-            case GpioAction::BUTTON_PRESS_A1: turboState |= (getGamepad()->turboState.buttons & GAMEPAD_MASK_A1); break;
-            case GpioAction::BUTTON_PRESS_A2: turboState |= (getGamepad()->turboState.buttons & GAMEPAD_MASK_A2); break;
-            case GpioAction::BUTTON_PRESS_L3: turboState |= (getGamepad()->turboState.buttons & GAMEPAD_MASK_L3); break;
-            case GpioAction::BUTTON_PRESS_R3: turboState |= (getGamepad()->turboState.buttons & GAMEPAD_MASK_R3); break;
+            case GpioAction::BUTTON_PRESS_B1: turboMask = GAMEPAD_MASK_B1; break;
+            case GpioAction::BUTTON_PRESS_B2: turboMask = GAMEPAD_MASK_B2; break;
+            case GpioAction::BUTTON_PRESS_B3: turboMask = GAMEPAD_MASK_B3; break;
+            case GpioAction::BUTTON_PRESS_B4: turboMask = GAMEPAD_MASK_B4; break;
+            case GpioAction::BUTTON_PRESS_L1: turboMask = GAMEPAD_MASK_L1; break;
+            case GpioAction::BUTTON_PRESS_R1: turboMask = GAMEPAD_MASK_R1; break;
+            case GpioAction::BUTTON_PRESS_L2: turboMask = GAMEPAD_MASK_L2; break;
+            case GpioAction::BUTTON_PRESS_R2: turboMask = GAMEPAD_MASK_R2; break;
+            case GpioAction::BUTTON_PRESS_S1: turboMask = GAMEPAD_MASK_S1; break;
+            case GpioAction::BUTTON_PRESS_S2: turboMask = GAMEPAD_MASK_S2; break;
+            case GpioAction::BUTTON_PRESS_A1: turboMask = GAMEPAD_MASK_A1; break;
+            case GpioAction::BUTTON_PRESS_A2: turboMask = GAMEPAD_MASK_A2; break;
+            case GpioAction::BUTTON_PRESS_L3: turboMask = GAMEPAD_MASK_L3; break;
+            case GpioAction::BUTTON_PRESS_R3: turboMask = GAMEPAD_MASK_R3; break;
             default: break;
         }
+        turboState = turboMask && (getGamepad()->turboState.buttons & turboMask);
+        // Held turbo buttons stay GPIO-low; fill follows shotCount (T30 = 30 Hz).
+        if (turboState && pinState)
+            pinState = turboShotPulseOn();
     }
 
     if (useMask && mapMask != NULL) {

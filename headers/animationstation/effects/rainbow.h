@@ -20,6 +20,7 @@ public:
 protected:
   int currentFrame = 0;
   bool reverse = false;
+  float breathPhase = 0.0f;
   absolute_time_t nextRunTime = nil_time;
 };
 

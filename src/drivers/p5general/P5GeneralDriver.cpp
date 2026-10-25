@@ -179,11 +179,20 @@ bool P5GeneralDriver::process(Gamepad * gamepad) {
         p5GeneralReport.accelerometer.z = ((gamepad->auxState.sensors.accelerometer.z & 0xFF) << 8) | ((gamepad->auxState.sensors.accelerometer.z & 0xFF00) >> 8);
     }
 
-    // if the touchpad is pressed (note A2 vs. S1 choice above), emulate one finger of the touchpad
-    touchpadData.p1.unpressed = p5GeneralReport.button_touchpad ? 0 : 1;
-    if (p5GeneralReport.button_touchpad) {
-        // make the assumption that since touchpad button is already being pressed, 
-        // the first touch position is in use and no other "touches" will be present
+    // Touchpad: prefer aux finger data (swipe) even when the click bit is also set.
+    const GamepadAux3DSensor & tp0 = gamepad->auxState.sensors.touchpad[0];
+    if (tp0.enabled) {
+        touchpadData.p1.unpressed = tp0.active ? 0 : 1;
+        touchpadData.p1.set_x(tp0.x);
+        touchpadData.p1.set_y(tp0.y);
+        if (gamepad->auxState.sensors.touchpad[1].enabled) {
+            const GamepadAux3DSensor & tp1 = gamepad->auxState.sensors.touchpad[1];
+            touchpadData.p2.unpressed = tp1.active ? 0 : 1;
+            touchpadData.p2.set_x(tp1.x);
+            touchpadData.p2.set_y(tp1.y);
+        }
+    } else if (p5GeneralReport.button_touchpad) {
+        touchpadData.p1.unpressed = 0;
         if (gamepad->pressedA3()) {
             touchpadData.p1.set_x(P5GENERAL_TP_X_MIN);
         } else if (gamepad->pressedA4()) {
@@ -191,19 +200,9 @@ bool P5GeneralDriver::process(Gamepad * gamepad) {
         } else {
             touchpadData.p1.set_x(P5GENERAL_TP_X_MAX / 2);
         }
+        touchpadData.p1.set_y(P5GENERAL_TP_Y_MAX / 2);
     } else {
-        // if more than one touch pad sensor, sensors will never be used out of order
-        if (gamepad->auxState.sensors.touchpad[0].enabled) {
-            touchpadData.p1.unpressed = !gamepad->auxState.sensors.touchpad[0].active;
-            touchpadData.p1.set_x(gamepad->auxState.sensors.touchpad[0].x);
-            touchpadData.p1.set_y(gamepad->auxState.sensors.touchpad[0].y);
-            
-            if (gamepad->auxState.sensors.touchpad[1].enabled) {
-                touchpadData.p2.unpressed = !gamepad->auxState.sensors.touchpad[1].active;
-                touchpadData.p2.set_x(gamepad->auxState.sensors.touchpad[1].x);
-                touchpadData.p2.set_y(gamepad->auxState.sensors.touchpad[1].y);
-            }
-        }
+        touchpadData.p1.unpressed = 1;
     }
     // check if any of the points are recently touched, rather than still being touched
     if (!pointOneTouched && !touchpadData.p1.unpressed) {

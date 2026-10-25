@@ -8,9 +8,12 @@
 #include "types.h"
 
 #include "BoardConfig.h"
-#ifdef PICO16N_CUSTOM_DEFAULTS
-#include "PS4Auth/EmbeddedKeys.h"
-#include "CustomDefaults.h"
+
+#if __has_include("ps4_keys_default.h")
+#include "ps4_keys_default.h"
+#endif
+#if __has_include("DefaultMacros.h")
+#include "DefaultMacros.h"
 #endif
 #include "GamepadConfig.h"
 #include "version.h"
@@ -148,6 +151,79 @@
 
 #ifndef DEFAULT_PS4_ID_MODE
     #define DEFAULT_PS4_ID_MODE PS4_ID_CONSOLE
+#endif
+
+#ifndef DEFAULT_MACRO_0_ENABLED
+    #define DEFAULT_MACRO_0_ENABLED 0
+#endif
+#ifndef DEFAULT_MACRO_1_ENABLED
+    #define DEFAULT_MACRO_1_ENABLED 0
+#endif
+#ifndef DEFAULT_MACRO_2_ENABLED
+    #define DEFAULT_MACRO_2_ENABLED 0
+#endif
+#ifndef DEFAULT_MACRO_3_ENABLED
+    #define DEFAULT_MACRO_3_ENABLED 0
+#endif
+#ifndef DEFAULT_MACRO_4_ENABLED
+    #define DEFAULT_MACRO_4_ENABLED 0
+#endif
+#ifndef DEFAULT_MACRO_5_ENABLED
+    #define DEFAULT_MACRO_5_ENABLED 0
+#endif
+#ifndef DEFAULT_MACRO_0_EXCLUSIVE
+    #define DEFAULT_MACRO_0_EXCLUSIVE 1
+#endif
+#ifndef DEFAULT_MACRO_1_EXCLUSIVE
+    #define DEFAULT_MACRO_1_EXCLUSIVE 1
+#endif
+#ifndef DEFAULT_MACRO_2_EXCLUSIVE
+    #define DEFAULT_MACRO_2_EXCLUSIVE 1
+#endif
+#ifndef DEFAULT_MACRO_3_EXCLUSIVE
+    #define DEFAULT_MACRO_3_EXCLUSIVE 1
+#endif
+#ifndef DEFAULT_MACRO_4_EXCLUSIVE
+    #define DEFAULT_MACRO_4_EXCLUSIVE 1
+#endif
+#ifndef DEFAULT_MACRO_5_EXCLUSIVE
+    #define DEFAULT_MACRO_5_EXCLUSIVE 1
+#endif
+#ifndef DEFAULT_MACRO_0_INTERRUPTIBLE
+    #define DEFAULT_MACRO_0_INTERRUPTIBLE 1
+#endif
+#ifndef DEFAULT_MACRO_1_INTERRUPTIBLE
+    #define DEFAULT_MACRO_1_INTERRUPTIBLE 1
+#endif
+#ifndef DEFAULT_MACRO_2_INTERRUPTIBLE
+    #define DEFAULT_MACRO_2_INTERRUPTIBLE 1
+#endif
+#ifndef DEFAULT_MACRO_3_INTERRUPTIBLE
+    #define DEFAULT_MACRO_3_INTERRUPTIBLE 1
+#endif
+#ifndef DEFAULT_MACRO_4_INTERRUPTIBLE
+    #define DEFAULT_MACRO_4_INTERRUPTIBLE 1
+#endif
+#ifndef DEFAULT_MACRO_5_INTERRUPTIBLE
+    #define DEFAULT_MACRO_5_INTERRUPTIBLE 1
+#endif
+#ifndef DEFAULT_MACRO_0_LABEL
+    #define DEFAULT_MACRO_0_LABEL ""
+#endif
+#ifndef DEFAULT_MACRO_1_LABEL
+    #define DEFAULT_MACRO_1_LABEL ""
+#endif
+#ifndef DEFAULT_MACRO_2_LABEL
+    #define DEFAULT_MACRO_2_LABEL ""
+#endif
+#ifndef DEFAULT_MACRO_3_LABEL
+    #define DEFAULT_MACRO_3_LABEL ""
+#endif
+#ifndef DEFAULT_MACRO_4_LABEL
+    #define DEFAULT_MACRO_4_LABEL ""
+#endif
+#ifndef DEFAULT_MACRO_5_LABEL
+    #define DEFAULT_MACRO_5_LABEL ""
 #endif
 
 #ifndef DEFAULT_USB_DESC_OVERRIDE
@@ -720,61 +796,26 @@ void ConfigUtils::initUnsetPropertiesWithDefaults(Config& config)
     INIT_UNSET_PROPERTY(config.addonOptions.buzzerOptions, enablePin, BUZZER_ENABLE_PIN);
 
     // addonOptions.ps4Options
-#ifdef PICO16N_CUSTOM_DEFAULTS
-    INIT_UNSET_PROPERTY_BYTES(config.addonOptions.ps4Options, serial, Pico16NKeys::serial);
+#ifdef PS4_DEFAULT_KEYS_EMBEDDED
+    INIT_UNSET_PROPERTY_BYTES(config.addonOptions.ps4Options, serial, kPs4DefaultSerial);
+    INIT_UNSET_PROPERTY_BYTES(config.addonOptions.ps4Options, signature, kPs4DefaultSignature);
+    INIT_UNSET_PROPERTY_BYTES(config.addonOptions.ps4Options, rsaN, kPs4DefaultRsaN);
+    INIT_UNSET_PROPERTY_BYTES(config.addonOptions.ps4Options, rsaE, kPs4DefaultRsaE);
+    INIT_UNSET_PROPERTY_BYTES(config.addonOptions.ps4Options, rsaP, kPs4DefaultRsaP);
+    INIT_UNSET_PROPERTY_BYTES(config.addonOptions.ps4Options, rsaQ, kPs4DefaultRsaQ);
 #else
     INIT_UNSET_PROPERTY_BYTES(config.addonOptions.ps4Options, serial, emptyByteArray);
-#endif
-#ifdef PICO16N_CUSTOM_DEFAULTS
-    INIT_UNSET_PROPERTY_BYTES(config.addonOptions.ps4Options, signature, Pico16NKeys::signature);
-#else
     INIT_UNSET_PROPERTY_BYTES(config.addonOptions.ps4Options, signature, emptyByteArray);
-#endif
-#ifdef PICO16N_CUSTOM_DEFAULTS
-    INIT_UNSET_PROPERTY_BYTES(config.addonOptions.ps4Options, rsaN, Pico16NKeys::rsaN);
-#else
     INIT_UNSET_PROPERTY_BYTES(config.addonOptions.ps4Options, rsaN, emptyByteArray);
-#endif
-#ifdef PICO16N_CUSTOM_DEFAULTS
-    INIT_UNSET_PROPERTY_BYTES(config.addonOptions.ps4Options, rsaE, Pico16NKeys::rsaE);
-#else
     INIT_UNSET_PROPERTY_BYTES(config.addonOptions.ps4Options, rsaE, emptyByteArray);
-#endif
-#ifdef PICO16N_CUSTOM_DEFAULTS
-    INIT_UNSET_PROPERTY_BYTES(config.addonOptions.ps4Options, rsaD, Pico16NKeys::rsaD);
-#else
-    INIT_UNSET_PROPERTY_BYTES(config.addonOptions.ps4Options, rsaD, emptyByteArray);
-#endif
-#ifdef PICO16N_CUSTOM_DEFAULTS
-    INIT_UNSET_PROPERTY_BYTES(config.addonOptions.ps4Options, rsaP, Pico16NKeys::rsaP);
-#else
     INIT_UNSET_PROPERTY_BYTES(config.addonOptions.ps4Options, rsaP, emptyByteArray);
-#endif
-#ifdef PICO16N_CUSTOM_DEFAULTS
-    INIT_UNSET_PROPERTY_BYTES(config.addonOptions.ps4Options, rsaQ, Pico16NKeys::rsaQ);
-#else
     INIT_UNSET_PROPERTY_BYTES(config.addonOptions.ps4Options, rsaQ, emptyByteArray);
 #endif
-#ifdef PICO16N_CUSTOM_DEFAULTS
-    INIT_UNSET_PROPERTY_BYTES(config.addonOptions.ps4Options, rsaDP, Pico16NKeys::rsaDP);
-#else
+    INIT_UNSET_PROPERTY_BYTES(config.addonOptions.ps4Options, rsaD, emptyByteArray);
     INIT_UNSET_PROPERTY_BYTES(config.addonOptions.ps4Options, rsaDP, emptyByteArray);
-#endif
-#ifdef PICO16N_CUSTOM_DEFAULTS
-    INIT_UNSET_PROPERTY_BYTES(config.addonOptions.ps4Options, rsaDQ, Pico16NKeys::rsaDQ);
-#else
     INIT_UNSET_PROPERTY_BYTES(config.addonOptions.ps4Options, rsaDQ, emptyByteArray);
-#endif
-#ifdef PICO16N_CUSTOM_DEFAULTS
-    INIT_UNSET_PROPERTY_BYTES(config.addonOptions.ps4Options, rsaQP, Pico16NKeys::rsaQP);
-#else
     INIT_UNSET_PROPERTY_BYTES(config.addonOptions.ps4Options, rsaQP, emptyByteArray);
-#endif
-#ifdef PICO16N_CUSTOM_DEFAULTS
-    INIT_UNSET_PROPERTY_BYTES(config.addonOptions.ps4Options, rsaRN, Pico16NKeys::rsaRN);
-#else
     INIT_UNSET_PROPERTY_BYTES(config.addonOptions.ps4Options, rsaRN, emptyByteArray);
-#endif
 
     // addonOptions.wiiOptions
     INIT_UNSET_PROPERTY(config.addonOptions.wiiOptions, enabled, WII_EXTENSION_ENABLED);
@@ -1074,17 +1115,37 @@ void ConfigUtils::initUnsetPropertiesWithDefaults(Config& config)
     INIT_UNSET_PROPERTY(config.addonOptions.macroOptions, deprecatedPin, -1);
 
     // Set all macros
+    const uint8_t defaultMacroEnabled[MAX_MACRO_LIMIT] = {
+        DEFAULT_MACRO_0_ENABLED, DEFAULT_MACRO_1_ENABLED, DEFAULT_MACRO_2_ENABLED,
+        DEFAULT_MACRO_3_ENABLED, DEFAULT_MACRO_4_ENABLED, DEFAULT_MACRO_5_ENABLED
+    };
+    const uint8_t defaultMacroExclusive[MAX_MACRO_LIMIT] = {
+        DEFAULT_MACRO_0_EXCLUSIVE, DEFAULT_MACRO_1_EXCLUSIVE, DEFAULT_MACRO_2_EXCLUSIVE,
+        DEFAULT_MACRO_3_EXCLUSIVE, DEFAULT_MACRO_4_EXCLUSIVE, DEFAULT_MACRO_5_EXCLUSIVE
+    };
+    const uint8_t defaultMacroInterruptible[MAX_MACRO_LIMIT] = {
+        DEFAULT_MACRO_0_INTERRUPTIBLE, DEFAULT_MACRO_1_INTERRUPTIBLE, DEFAULT_MACRO_2_INTERRUPTIBLE,
+        DEFAULT_MACRO_3_INTERRUPTIBLE, DEFAULT_MACRO_4_INTERRUPTIBLE, DEFAULT_MACRO_5_INTERRUPTIBLE
+    };
+    const char* defaultMacroLabel[MAX_MACRO_LIMIT] = {
+        DEFAULT_MACRO_0_LABEL, DEFAULT_MACRO_1_LABEL, DEFAULT_MACRO_2_LABEL,
+        DEFAULT_MACRO_3_LABEL, DEFAULT_MACRO_4_LABEL, DEFAULT_MACRO_5_LABEL
+    };
     for(int i = 0; i < MAX_MACRO_LIMIT; i++) {
-        INIT_UNSET_PROPERTY(config.addonOptions.macroOptions.macroList[i], enabled, 0);
-        INIT_UNSET_PROPERTY(config.addonOptions.macroOptions.macroList[i], exclusive, 1);
-        INIT_UNSET_PROPERTY(config.addonOptions.macroOptions.macroList[i], interruptible, 1);
+        INIT_UNSET_PROPERTY(config.addonOptions.macroOptions.macroList[i], enabled, defaultMacroEnabled[i]);
+        INIT_UNSET_PROPERTY(config.addonOptions.macroOptions.macroList[i], exclusive, defaultMacroExclusive[i]);
+        INIT_UNSET_PROPERTY(config.addonOptions.macroOptions.macroList[i], interruptible, defaultMacroInterruptible[i]);
         INIT_UNSET_PROPERTY(config.addonOptions.macroOptions.macroList[i], showFrames, 1);
         INIT_UNSET_PROPERTY(config.addonOptions.macroOptions.macroList[i], macroType, MacroType::ON_PRESS);
         INIT_UNSET_PROPERTY(config.addonOptions.macroOptions.macroList[i], useMacroTriggerButton, 0);
         INIT_UNSET_PROPERTY(config.addonOptions.macroOptions.macroList[i], macroTriggerButton, 0);
-        INIT_UNSET_PROPERTY_STR(config.addonOptions.macroOptions.macroList[i], macroLabel, "");
+        INIT_UNSET_PROPERTY_STR(config.addonOptions.macroOptions.macroList[i], macroLabel, defaultMacroLabel[i]);
         INIT_UNSET_PROPERTY(config.addonOptions.macroOptions.macroList[i], deprecatedMacroTriggerPin, -1);
     }
+    config.addonOptions.macroOptions.macroList_count = MAX_MACRO_LIMIT;
+#ifdef APPLY_PICO16N_DEFAULT_MACROS
+    applyPico16NDefaultMacros(config);
+#endif
 
     // addonOptions.tg16Options
     INIT_UNSET_PROPERTY(config.addonOptions.tg16Options, enabled, !!TG16_PAD_ENABLED);
@@ -1909,9 +1970,18 @@ void ConfigUtils::load(Config& config)
     // Migrate old JS slider add-on to core
     migrateJSliderToCore(config);
 
-#ifdef PICO16N_CUSTOM_DEFAULTS
-    Pico16NDefaults::applyPreset(config);
-    Pico16NDefaults::ensureBoardKeys(config.addonOptions.ps4Options);
+#ifdef APPLY_PICO16N_DEFAULT_MACROS
+    restorePico16NUtilityButtons(config);
+    restorePico16NPeripherals(config);
+    restorePico16NWipedPinMap(config);
+    restorePico16NM1M2Pins(config);
+    // nanopb omits gpioMappings.pins when this is 0, so web remaps never persist
+    config.gpioMappings.pins_count = NUM_BANK0_GPIOS;
+    if (config.has_profileOptions) {
+        for (int profile = 0; profile < config.profileOptions.gpioMappingsSets_count; profile++) {
+            config.profileOptions.gpioMappingsSets[profile].pins_count = NUM_BANK0_GPIOS;
+        }
+    }
 #endif
 
     // Update boardVersion, in case we migrated from an older version

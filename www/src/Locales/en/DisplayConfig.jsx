@@ -3,7 +3,7 @@ export default {
 	'sub-header-text':
 		'A monochrome display can be used to show controller status and button activity. Ensure your display module has the following attributes:',
 	'list-text':
-		'<1>Monochrome display with 128x64 resolution</1> <1>Uses I2C with a SSD1306, SH1106, SH1107 or other compatible display IC</1> <1>Supports 3.3v operation</1>',
+		'<1>Monochrome display with 128x64 resolution</1> <1>Uses I2C with a SSD1315, SSD1306, SH1106, SH1107 or other compatible display IC</1> <1>Supports 3.3v operation</1>',
 	section: {
 		'hardware-header': 'Hardware Options',
 		'screen-header': 'Screen Options',

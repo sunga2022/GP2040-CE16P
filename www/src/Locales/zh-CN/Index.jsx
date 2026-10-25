@@ -8,6 +8,7 @@ import PinMapping from './PinMapping';
 import PeripheralMapping from './PeripheralMapping';
 import LedConfig from './LedConfig';
 import CustomTheme from './CustomTheme';
+import RgbMenu from './RgbMenu';
 import BackupPage from './BackupPage';
 import DisplayConfig from './DisplayConfig';
 import AddonsConfig from './AddonsConfig';
@@ -32,6 +33,7 @@ export default {
 	PeripheralMapping,
 	LedConfig,
 	CustomTheme,
+	RgbMenu,
 	BackupPage,
 	DisplayConfig,
 	AddonsConfig,

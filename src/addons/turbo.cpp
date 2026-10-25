@@ -220,6 +220,10 @@ void TurboInput::process()
         }
     }
 
+    // Keep turbo assignment visible to both cores every frame
+    gamepad->turboState.buttons = turboButtonsMask;
+    processedGamepad->turboState.buttons = turboButtonsMask;
+
     // Button updates
     lastButtons = gamepad->state.buttons;
 

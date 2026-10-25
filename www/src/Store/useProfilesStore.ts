@@ -124,6 +124,10 @@ const useProfilesStore = create<State & Actions>()((set, get) => ({
 		{ action, customButtonMask = 0, customDpadMask = 0 },
 	) =>
 		set((state) => {
+			// Pico16N small keys: Turbo, FN, A2, A1, S1, S2
+			if (['pin05', 'pin06', 'pin07', 'pin08', 'pin17', 'pin24'].includes(pin)) {
+				return state;
+			}
 			const profiles = [...state.profiles];
 			profiles[profileIndex] = {
 				...profiles[profileIndex],
@@ -143,10 +147,21 @@ const useProfilesStore = create<State & Actions>()((set, get) => ({
 		}),
 	saveProfiles: async () => {
 		const [baseProfile, ...profiles] = get().profiles;
-		return Promise.all([
-			WebApi.setPinMappings(baseProfile),
-			WebApi.setProfileOptions(profiles),
-		]);
+		if (!baseProfile) {
+			throw new Error('No pin profile loaded');
+		}
+		// The firmware has one POST buffer. Saving both mappings in parallel
+		// used to overwrite that buffer and write action 0 (NONE) to every pin
+		// while the page still showed "saved".
+		const pinResult = await WebApi.setPinMappings(baseProfile);
+		if (pinResult?.data?.success === false) {
+			throw new Error(pinResult.data.error || 'Pin mapping save failed');
+		}
+		const profileResult = await WebApi.setProfileOptions(profiles);
+		if (profileResult?.data?.success === false) {
+			throw new Error(profileResult.data.error || 'Profile save failed');
+		}
+		return [pinResult, profileResult];
 	},
 	toggleProfileEnabled: (profileIndex) =>
 		set((state) => {

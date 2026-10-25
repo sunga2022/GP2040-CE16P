@@ -7,13 +7,15 @@
 #include <vector>
 
 struct Pixel {
-  Pixel(int index, uint32_t mask = 0) : index(index), mask(mask) { }
-  Pixel(int index, std::vector<uint8_t> positions) : index(index), positions(positions) { }
-  Pixel(int index, uint32_t mask, std::vector<uint8_t> positions) : index(index), mask(mask), positions(positions) { }
+  Pixel(int index, uint32_t mask = 0) : index(index), mask(mask), gpio(-1) { }
+  Pixel(int index, std::vector<uint8_t> positions) : index(index), positions(positions), gpio(-1) { }
+  Pixel(int index, uint32_t mask, std::vector<uint8_t> positions) : index(index), mask(mask), positions(positions), gpio(-1) { }
+  Pixel(int index, uint32_t mask, std::vector<uint8_t> positions, int8_t gpioPin) : index(index), mask(mask), positions(positions), gpio(gpioPin) { }
 
   int index;                      // The pixel index
   uint32_t mask;                  // Used to detect per-pixel lighting
   std::vector<uint8_t> positions; // The actual LED indexes on the chain
+  int8_t gpio;                    // Physical GPIO for press lighting; -1 uses remapped mask
 };
 
 inline const Pixel NO_PIXEL(-1);
