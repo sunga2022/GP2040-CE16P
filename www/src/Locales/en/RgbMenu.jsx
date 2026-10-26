@@ -5,7 +5,7 @@ export default {
 		'Pick one of 30 effects. Saving applies it immediately. The controller light hotkeys still step through the list, and the last step is per-button custom.',
 	'custom-title': 'Per-button custom',
 	'custom-help':
-		'When this is on, each lit button uses its own color and effect instead of the pad effect above. Effect starts as solid; open the menu to pick breath, jump, fast flash, slow flash, or heartbeat. Press color is the feedback color while that button is held.',
+		'Turning on per-button custom presets every button to solid. Use each menu to change that button to breath, jump, fast flash, slow flash, or heartbeat. Color and press color are set separately.',
 	'use-custom': 'Use per-button custom',
 	'col-button': 'Button',
 	'col-color': 'Color',

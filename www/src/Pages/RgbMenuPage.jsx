@@ -28,6 +28,14 @@ const PRESETS = Array.from({ length: 30 }, (_, i) => i);
 
 const emptyKey = () => ({ normal: '#ff1010', pressed: '#ffffff', effect: 0 });
 
+const withSolidEffects = (theme) => {
+	const next = { ...theme };
+	LED_BUTTONS.forEach((key) => {
+		next[key] = { ...(next[key] || emptyKey()), effect: 0 };
+	});
+	return next;
+};
+
 export default function RgbMenuPage() {
 	const { t } = useTranslation('');
 	const [preset, setPreset] = useState(0);
@@ -45,10 +53,12 @@ export default function RgbMenuPage() {
 			setPreset(index >= 30 ? 0 : index);
 			const next = { ...(data.customTheme || {}) };
 			LED_BUTTONS.forEach((key) => {
+				const stored = Math.min(5, Number(next[key]?.effect ?? 0));
 				next[key] = {
 					normal: next[key]?.normal || '#ff1010',
 					pressed: next[key]?.pressed || '#ffffff',
-					effect: Math.min(5, Number(next[key]?.effect ?? 0)),
+					// Custom off: every button is preset to solid. Saved effects only come back while custom is on.
+					effect: index === 30 ? stored : 0,
 				};
 			});
 			setTheme(next);
@@ -101,7 +111,11 @@ export default function RgbMenuPage() {
 				id="use-custom-lights"
 				label={t('RgbMenu:use-custom')}
 				checked={useCustom}
-				onChange={(e) => setUseCustom(e.target.checked)}
+				onChange={(e) => {
+					const on = e.target.checked;
+					setUseCustom(on);
+					if (on) setTheme((current) => withSolidEffects(current));
+				}}
 			/>
 
 			<div className="table-responsive">
