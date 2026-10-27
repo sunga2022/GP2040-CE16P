@@ -18,6 +18,15 @@ on:
           - Pico16N
           - G4F
           - G5F
+          - 14PNEW
+          - 17P
+          - 17PNT
+          - G2
+          - G2G
+          - Pico19
+          - QF
+          - QFG
+          - RUYI
 
 env:
   BUILD_TYPE: Release
@@ -32,8 +41,9 @@ jobs:
     # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
     runs-on: ubuntu-22.04
     strategy:
+      fail-fast: false
       matrix:
-        GP2040_BOARDCONFIG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.board_config != '' && fromJSON(format('["{0}"]', github.event.inputs.board_config)) || fromJSON('["Pico16N","G4F","G5F"]') }}
+        GP2040_BOARDCONFIG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.board_config != '' && fromJSON(format('["{0}"]', github.event.inputs.board_config)) || fromJSON('["Pico16N","G4F","G5F","14PNEW","17P","17PNT","G2","G2G","Pico19","QF","QFG","RUYI"]') }}
     steps:
       - name: Setup cmake
         uses: jwlawson/actions-setup-cmake@v2
