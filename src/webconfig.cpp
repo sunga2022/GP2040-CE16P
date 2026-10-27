@@ -852,6 +852,10 @@ std::string setLedOptions()
     readDoc(ledOptions.ledFormat, doc, "ledFormat");
     readDoc(ledOptions.ledLayout, doc, "ledLayout");
     readDoc(ledOptions.ledsPerButton, doc, "ledsPerButton");
+    if (ledOptions.ledsPerButton < 1)
+        ledOptions.ledsPerButton = 1;
+    else if (ledOptions.ledsPerButton > 4)
+        ledOptions.ledsPerButton = 4;
     readDoc(ledOptions.brightnessMaximum, doc, "brightnessMaximum");
     readDoc(ledOptions.brightnessSteps, doc, "brightnessSteps");
     readDoc(ledOptions.turnOffWhenSuspended, doc, "turnOffWhenSuspended");

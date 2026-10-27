@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import Section from '../Components/Section';
 import WebApi from '../Services/WebApi';
+import { hexToInt } from '../Services/Utilities';
 
 const LED_BUTTONS = [
 	'Left',
@@ -25,6 +26,7 @@ const LED_BUTTONS = [
 
 const KEY_FX = [0, 1, 2, 3, 4, 5];
 const PRESETS = Array.from({ length: 30 }, (_, i) => i);
+const LEDS_PER_BUTTON = [1, 2, 3, 4];
 
 const emptyKey = () => ({ normal: '#ff1010', pressed: '#ffffff', effect: 0 });
 
@@ -44,8 +46,17 @@ export default function RgbMenuPage() {
 	const [saveMessage, setSaveMessage] = useState('');
 	const [saving, setSaving] = useState(false);
 	const [loaded, setLoaded] = useState(false);
+	const [ledsPerButton, setLedsPerButton] = useState(1);
+	const [ledOptions, setLedOptions] = useState(null);
 
 	useEffect(() => {
+		WebApi.getLedOptions(() => {}).then((data) => {
+			if (data) {
+				const count = Number(data.ledsPerButton);
+				setLedsPerButton(count >= 1 && count <= 4 ? count : 1);
+				setLedOptions(data);
+			}
+		});
 		WebApi.getCustomTheme(() => {}).then((data) => {
 			if (!data) return;
 			const index = Number(data.baseAnimationIndex) || 0;
@@ -76,17 +87,39 @@ export default function RgbMenuPage() {
 	const save = async () => {
 		setSaving(true);
 		setSaveMessage('');
-		const ok = await WebApi.setCustomTheme({
+		let ok = await WebApi.setCustomTheme({
 			hasCustomTheme: true,
 			baseAnimationIndex: useCustom ? 30 : preset,
 			customTheme: theme,
 		});
+		if (ok && ledOptions) {
+			ok = await WebApi.setLedOptions({
+				...ledOptions,
+				ledsPerButton,
+				pledColor: hexToInt(ledOptions.pledColor || '#000000'),
+			});
+		}
 		setSaving(false);
 		setSaveMessage(ok ? t('RgbMenu:saved-text') : t('RgbMenu:failed-text'));
 	};
 
 	return (
 		<Section title={t('RgbMenu:header-text')}>
+			<Form.Group className="mb-3">
+				<Form.Label>{t('RgbMenu:leds-per-button-label')}</Form.Label>
+				<Form.Select
+					value={ledsPerButton}
+					style={{ maxWidth: '16rem' }}
+					onChange={(e) => setLedsPerButton(Number(e.target.value))}
+				>
+					{LEDS_PER_BUTTON.map((count) => (
+						<option key={count} value={count}>
+							{t('RgbMenu:leds-per-button-option', { count })}
+						</option>
+					))}
+				</Form.Select>
+				<Form.Text className="d-block mt-2">{t('RgbMenu:leds-per-button-help')}</Form.Text>
+			</Form.Group>
 			<Form.Group className="mb-3">
 				<Form.Label>{t('RgbMenu:preset-label')}</Form.Label>
 				<Form.Select

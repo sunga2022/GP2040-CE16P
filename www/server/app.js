@@ -226,7 +226,7 @@ app.get('/api/getLedOptions', (req, res) => {
 		dataPin: 22,
 		ledFormat: 0,
 		ledLayout: 1,
-		ledsPerButton: 2,
+		ledsPerButton: 1,
 		ledButtonMap: {
 			Up: 3,
 			Down: 1,

@@ -1,5 +1,9 @@
 export default {
 	'header-text': 'RGB 灯效',
+	'leds-per-button-label': '每个按键的灯数量',
+	'leds-per-button-option': '{{count}} 颗灯',
+	'leds-per-button-help':
+		'默认 1 颗。一颗按键后面最多可以串 4 颗灯，选好后点保存。数量改完要重启手柄，灯才会按新的颗数亮。',
 	'preset-label': '整机灯效',
 	'preset-help':
 		'下面 30 条灯效可以直接选。保存后灯会换过去。手柄上原来的灯效热键也能前后切，切到最后一项就是按键自定义。',

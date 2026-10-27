@@ -1,5 +1,9 @@
 export default {
 	'header-text': 'RGB Effects',
+	'leds-per-button-label': 'LEDs per button',
+	'leds-per-button-option': '{{count}} LEDs',
+	'leds-per-button-help':
+		'Default is 1. One button can drive up to 4 LEDs. Save, then restart the controller so the new count is used.',
 	'preset-label': 'Pad effect',
 	'preset-help':
 		'Pick one of 30 effects. Saving applies it immediately. The controller light hotkeys still step through the list, and the last step is per-button custom.',
