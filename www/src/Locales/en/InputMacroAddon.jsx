@@ -11,8 +11,8 @@ export default {
 		'Interruptible (User Input Cancels the Macro)',
 	'input-macro-macro-show-frames': 'Show Frames (1 Frame = 16.666 ms)',
 	'input-macro-macro-uses-buttons':
-		'Use Macro Button + Gamepad Button to Trigger',
-	'input-macro-macro-button-pin-plus': 'Button Assignment:',
+		'Trigger with a gamepad button (no macro pin)',
+	'input-macro-macro-button-pin-plus': 'Trigger button:',
 	'input-macro-header-text': 'Macros Overview',
 	'input-macro-macro-list-txt': 'Macro {{macroNumber}}',
 	'input-macro-duration-label': 'Duration',
@@ -21,7 +21,9 @@ export default {
 	'input-macro-time-label-frames': 'frame(s)',
 	'input-macro-release-and-wait-label': 'release and wait ',
 	'input-macro-sub-header':
-		'Note: For pin mapped macros, please see the Pin Mapping page under Configuration. Macros can also be assigned to a gamepad button with the corresponding held single Macro button.',
+		'To play a slot, turn on “Trigger with a gamepad button” and pick a trigger (M1 or M2 is enough). A macro pin is not required. Pin-mapped Macro 1–6 still start that slot.',
+	'input-macro-record-help':
+		'Hold FN for 5 seconds. After the system LED flashes 5 times, recording starts. Hold FN for 5 seconds again and it flashes 3 times, then saves. An empty recording is discarded and does not use a slot. Recordings fill Macro 1 through Macro 6, then overwrite from Macro 1. Leading and trailing gaps are removed, up to 30 steps. Directions, A/B/X/Y, shoulders, L3/R3, and M1–M3 are recorded. FN, Home, Start, Select, touch, and sticks are not. FN is not sent to the host.',
 	'input-macro-macro-label-label': 'Label',
 	'input-macro-add-input-label': 'Add Input +',
 	'input-macro-type': {

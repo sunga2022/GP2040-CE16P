@@ -1,4 +1,5 @@
 #include "addons/board_led.h"
+#include "addons/input_macro.h"
 #include "drivermanager.h"
 #include "drivers/ps4/PS4Driver.h"
 #include "usbdriver.h"
@@ -22,6 +23,9 @@ void BoardLedAddon::setup() {
 }
 
 void BoardLedAddon::process() {
+    if (inputMacroLedOverride()) {
+        return;
+    }
     bool state = 0;
     Gamepad * processedGamepad;
     uint16_t joystickMid = GAMEPAD_JOYSTICK_MID;

@@ -560,6 +560,9 @@ export default function MacrosPage() {
 											<Section
 												title={t('InputMacroAddon:input-macro-header-text')}
 											>
+												<Alert variant="info">
+													{t('InputMacroAddon:input-macro-record-help')}
+												</Alert>
 												<Row>
 													<Col>
 														<Table
@@ -626,12 +629,26 @@ export default function MacrosPage() {
 																				<em>---</em>
 																			</td>
 																		) : (
-																			<td>{`${
-																				BUTTON_MASKS_OPTIONS.find(
-																					(b) =>
-																						b.value == macro.macroTriggerButton,
-																				).label
-																			}`}</td>
+																			<td>
+																				{(() => {
+																					const mask =
+																						BUTTON_MASKS_OPTIONS.find(
+																							(b) =>
+																								b.value ==
+																								macro.macroTriggerButton,
+																						);
+																					if (!mask) {
+																						return '---';
+																					}
+																					return (
+																						(buttonLabelType &&
+																							BUTTONS[buttonLabelType][
+																								mask.label
+																							]) ||
+																						mask.label
+																					);
+																				})()}
+																			</td>
 																		)}
 																		<td>{macro.macroInputs.length}</td>
 																		<td>

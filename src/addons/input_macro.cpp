@@ -4,25 +4,35 @@
 
 #include "hardware/gpio.h"
 
-bool InputMacro::available() {
-    // Macro Button initialized by void Gamepad::setup()
-    GpioMappingInfo* pinMappings = Storage::getInstance().getProfilePinMappings();
-    for (Pin_t pin = 0; pin < (Pin_t)NUM_BANK0_GPIOS; pin++)
-    {
-        switch( pinMappings[pin].action ) {
-            case GpioAction::BUTTON_PRESS_MACRO:
-            case GpioAction::BUTTON_PRESS_MACRO_1:
-            case GpioAction::BUTTON_PRESS_MACRO_2:
-            case GpioAction::BUTTON_PRESS_MACRO_3:
-            case GpioAction::BUTTON_PRESS_MACRO_4:
-            case GpioAction::BUTTON_PRESS_MACRO_5:
-            case GpioAction::BUTTON_PRESS_MACRO_6:
-                return true;
-            default:
-                break;
-        }
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+
+static volatile bool s_inputMacroLedOverride = false;
+
+static const char RECORD_LABEL_PREFIX[] = "录制 ";
+
+static uint32_t quantizePressUs(uint32_t elapsedUs) {
+    uint32_t frames = (elapsedUs + (MACRO_RECORD_FRAME_US / 2)) / MACRO_RECORD_FRAME_US;
+    if (frames < 1) {
+        frames = 1;
     }
-    return false;
+    return frames * MACRO_RECORD_FRAME_US;
+}
+
+static uint32_t quantizeWaitUs(uint32_t elapsedUs) {
+    uint32_t frames = (elapsedUs + (MACRO_RECORD_FRAME_US / 2)) / MACRO_RECORD_FRAME_US;
+    return frames * MACRO_RECORD_FRAME_US;
+}
+
+bool inputMacroLedOverride() {
+    return s_inputMacroLedOverride;
+}
+
+bool InputMacro::available() {
+    // Recording uses FN and playback can use a trigger button, so the addon
+    // stays loaded even when no MACRO pin is mapped.
+    return true;
 }
 
 void InputMacro::setup() {
@@ -68,6 +78,25 @@ void InputMacro::setup() {
     }
     boardLedEnabled = false;
     prevMacroInputPressed = false;
+    recordPhase = RECORD_IDLE;
+    recordFlashSaves = false;
+    fnWasDown = false;
+    fnSeenReleased = true;
+    fnDownSince = 0;
+    recordFlashesLeft = 0;
+    recordLedOn = false;
+    recordLedNextMs = 0;
+    recordMask = 0;
+    recordStepStart = 0;
+    recordStepCount = 0;
+    memset(recordStepMask, 0, sizeof(recordStepMask));
+    memset(recordStepDuration, 0, sizeof(recordStepDuration));
+    memset(recordStepWait, 0, sizeof(recordStepWait));
+    s_inputMacroLedOverride = false;
+    if (isValidPin(BOARD_LED_PIN)) {
+        gpio_init(BOARD_LED_PIN);
+        gpio_set_dir(BOARD_LED_PIN, GPIO_OUT);
+    }
     reset();
 }
 
@@ -104,14 +133,14 @@ void InputMacro::checkMacroPress() {
             continue;
         Macro * macro = &inputMacroOptions->macroList[i];
         if ( macro->useMacroTriggerButton ) {
-            // Use Gamepad Button for Macro Trigger
-            if ((allPins & macroButtonMask) &&
-                ((gamepad->state.buttons & macro->macroTriggerButton) ||
-                    (gamepad->state.dpad & (macro->macroTriggerButton >> 16))) ) {
+            // The assigned button alone starts the macro. A MACRO pin is not required.
+            uint32_t trigger = macro->macroTriggerButton;
+            if ((gamepad->state.buttons & trigger) ||
+                    (gamepad->state.dpad & (trigger >> 16))) {
                 pressedMacro = i;
                 break;
             }
-        } else if ( allPins & macroPinMasks[i] ) {
+        } else if ( macroPinMasks[i] && (allPins & macroPinMasks[i]) ) {
             // Use Pin Manager for Macro Trigger
             pressedMacro = i;
             break;
@@ -128,6 +157,11 @@ void InputMacro::checkMacroAction() {
     }
 
     bool newPress = macroInputPressed && (prevMacroInputPressed ^ macroInputPressed);
+
+    if (macroPosition < 0 || macroPosition >= MAX_MACRO_LIMIT) {
+        prevMacroInputPressed = macroInputPressed;
+        return;
+    }
 
     // Check to see if we should change the current macro (or turn off based on input)
     if ( inputMacroOptions->macroList[macroPosition].macroType == ON_PRESS ) {
@@ -243,6 +277,11 @@ void InputMacro::runCurrentMacro() {
 
 void InputMacro::preprocess()
 {
+    updateRecorder();
+    if (recordPhase != RECORD_IDLE) {
+        return;
+    }
+
     FocusModeOptions * focusModeOptions = &Storage::getInstance().getAddonOptions().focusModeOptions;
     if (focusModeOptions->enabled && focusModeOptions->macroLockEnabled) {
         Gamepad * gamepad = Storage::getInstance().GetGamepad();
@@ -289,5 +328,269 @@ void InputMacro::reinit() {
             default:
                 break;
         }
+    }
+}
+
+uint32_t InputMacro::captureRecordMask() {
+    // Read the pins themselves so turbo flicker and SOCD are not stored as steps.
+    const uint32_t recordedButtons =
+        GAMEPAD_MASK_B1 | GAMEPAD_MASK_B2 | GAMEPAD_MASK_B3 | GAMEPAD_MASK_B4 |
+        GAMEPAD_MASK_L1 | GAMEPAD_MASK_R1 | GAMEPAD_MASK_L2 | GAMEPAD_MASK_R2 |
+        GAMEPAD_MASK_L3 | GAMEPAD_MASK_R3 |
+        GAMEPAD_MASK_E1 | GAMEPAD_MASK_E2 | GAMEPAD_MASK_E3;
+    Gamepad * gamepad = Storage::getInstance().GetGamepad();
+    Mask_t values = gamepad->debouncedGpio;
+    GpioMappingInfo* pinMappings = Storage::getInstance().getProfilePinMappings();
+    uint32_t mask = 0;
+    for (Pin_t pin = 0; pin < (Pin_t)NUM_BANK0_GPIOS; pin++) {
+        if ((values & (1u << pin)) == 0) {
+            continue;
+        }
+        switch (pinMappings[pin].action) {
+            case GpioAction::BUTTON_PRESS_UP:
+            case GpioAction::DIGITAL_DIRECTION_UP:
+                mask |= GAMEPAD_MASK_DU;
+                break;
+            case GpioAction::BUTTON_PRESS_DOWN:
+            case GpioAction::DIGITAL_DIRECTION_DOWN:
+                mask |= GAMEPAD_MASK_DD;
+                break;
+            case GpioAction::BUTTON_PRESS_LEFT:
+            case GpioAction::DIGITAL_DIRECTION_LEFT:
+                mask |= GAMEPAD_MASK_DL;
+                break;
+            case GpioAction::BUTTON_PRESS_RIGHT:
+            case GpioAction::DIGITAL_DIRECTION_RIGHT:
+                mask |= GAMEPAD_MASK_DR;
+                break;
+            case GpioAction::BUTTON_PRESS_B1: mask |= GAMEPAD_MASK_B1; break;
+            case GpioAction::BUTTON_PRESS_B2: mask |= GAMEPAD_MASK_B2; break;
+            case GpioAction::BUTTON_PRESS_B3: mask |= GAMEPAD_MASK_B3; break;
+            case GpioAction::BUTTON_PRESS_B4: mask |= GAMEPAD_MASK_B4; break;
+            case GpioAction::BUTTON_PRESS_L1: mask |= GAMEPAD_MASK_L1; break;
+            case GpioAction::BUTTON_PRESS_R1: mask |= GAMEPAD_MASK_R1; break;
+            case GpioAction::BUTTON_PRESS_L2: mask |= GAMEPAD_MASK_L2; break;
+            case GpioAction::BUTTON_PRESS_R2: mask |= GAMEPAD_MASK_R2; break;
+            case GpioAction::BUTTON_PRESS_L3: mask |= GAMEPAD_MASK_L3; break;
+            case GpioAction::BUTTON_PRESS_R3: mask |= GAMEPAD_MASK_R3; break;
+            case GpioAction::BUTTON_PRESS_E1: mask |= GAMEPAD_MASK_E1; break;
+            case GpioAction::BUTTON_PRESS_E2: mask |= GAMEPAD_MASK_E2; break;
+            case GpioAction::BUTTON_PRESS_E3: mask |= GAMEPAD_MASK_E3; break;
+            case GpioAction::CUSTOM_BUTTON_COMBO:
+                mask |= pinMappings[pin].customButtonMask & recordedButtons;
+                if (pinMappings[pin].customDpadMask & GAMEPAD_MASK_UP) mask |= GAMEPAD_MASK_DU;
+                if (pinMappings[pin].customDpadMask & GAMEPAD_MASK_DOWN) mask |= GAMEPAD_MASK_DD;
+                if (pinMappings[pin].customDpadMask & GAMEPAD_MASK_LEFT) mask |= GAMEPAD_MASK_DL;
+                if (pinMappings[pin].customDpadMask & GAMEPAD_MASK_RIGHT) mask |= GAMEPAD_MASK_DR;
+                break;
+            default:
+                break;
+        }
+    }
+    return mask;
+}
+
+bool InputMacro::recordingHasContent() const {
+    return recordStepCount > 0 || recordMask != 0;
+}
+
+uint32_t InputMacro::nextRecordSequence() const {
+    uint32_t maxSeq = 0;
+    size_t prefixLen = strlen(RECORD_LABEL_PREFIX);
+    for (int i = 0; i < MAX_MACRO_LIMIT; i++) {
+        const char* label = inputMacroOptions->macroList[i].macroLabel;
+        if (strncmp(label, RECORD_LABEL_PREFIX, prefixLen) == 0) {
+            int seq = atoi(label + prefixLen);
+            if (seq > (int)maxSeq) {
+                maxSeq = (uint32_t)seq;
+            }
+        }
+    }
+    return maxSeq + 1;
+}
+
+void InputMacro::sampleRecording(uint64_t now) {
+    uint32_t mask = captureRecordMask();
+    if (mask == recordMask || recordStepCount >= MAX_MACRO_INPUT_LIMIT) {
+        return;
+    }
+
+    if (recordMask != 0) {
+        uint32_t elapsed = (uint32_t)(now - recordStepStart);
+        recordStepMask[recordStepCount] = recordMask;
+        recordStepDuration[recordStepCount] = quantizePressUs(elapsed);
+        recordStepWait[recordStepCount] = 0;
+        recordStepCount++;
+    } else if (recordStepCount > 0) {
+        uint32_t elapsed = (uint32_t)(now - recordStepStart);
+        recordStepWait[recordStepCount - 1] = quantizeWaitUs(elapsed);
+    }
+
+    recordMask = (recordStepCount >= MAX_MACRO_INPUT_LIMIT) ? 0 : mask;
+    recordStepStart = now;
+}
+
+void InputMacro::sealOpenStep(uint64_t now) {
+    if (recordMask == 0 || recordStepCount >= MAX_MACRO_INPUT_LIMIT) {
+        recordMask = 0;
+        return;
+    }
+    uint32_t elapsed = (uint32_t)(now - recordStepStart);
+    recordStepMask[recordStepCount] = recordMask;
+    recordStepDuration[recordStepCount] = quantizePressUs(elapsed);
+    recordStepWait[recordStepCount] = 0;
+    recordStepCount++;
+    recordMask = 0;
+}
+
+void InputMacro::beginRecordFlash(int flashes, bool saving) {
+    recordPhase = RECORD_FLASHING;
+    recordFlashSaves = saving;
+    recordFlashesLeft = flashes;
+    recordLedOn = false;
+    recordLedNextMs = 0;
+    fnSeenReleased = false;
+    fnWasDown = false;
+    s_inputMacroLedOverride = true;
+    reset();
+}
+
+void InputMacro::tickRecordFlash() {
+    uint32_t nowMs = getMillis();
+    if (recordLedNextMs != 0 && (int32_t)(nowMs - recordLedNextMs) < 0) {
+        return;
+    }
+
+    if (!recordLedOn) {
+        recordLedOn = true;
+        gpio_put(BOARD_LED_PIN, 1);
+        recordLedNextMs = nowMs + MACRO_RECORD_FLASH_MS;
+        return;
+    }
+
+    recordLedOn = false;
+    gpio_put(BOARD_LED_PIN, 0);
+    recordFlashesLeft--;
+    recordLedNextMs = nowMs + MACRO_RECORD_FLASH_MS;
+    if (recordFlashesLeft > 0) {
+        return;
+    }
+
+    s_inputMacroLedOverride = false;
+    if (recordFlashSaves) {
+        commitRecording();
+    } else {
+        recordMask = 0;
+        recordStepCount = 0;
+        recordStepStart = getMicro();
+        memset(recordStepMask, 0, sizeof(recordStepMask));
+        memset(recordStepDuration, 0, sizeof(recordStepDuration));
+        memset(recordStepWait, 0, sizeof(recordStepWait));
+        recordPhase = RECORD_ACTIVE;
+        return;
+    }
+    recordPhase = RECORD_IDLE;
+    fnSeenReleased = false;
+}
+
+void InputMacro::commitRecording() {
+    if (recordStepCount <= 0) {
+        return;
+    }
+
+    uint32_t seq = nextRecordSequence();
+    int slot = (int)((seq - 1) % MAX_MACRO_LIMIT);
+    Macro& macro = inputMacroOptions->macroList[slot];
+
+    if (macro.macroType != MacroType::ON_PRESS &&
+            macro.macroType != MacroType::ON_HOLD_REPEAT &&
+            macro.macroType != MacroType::ON_TOGGLE) {
+        macro.macroType = MacroType::ON_PRESS;
+    }
+    macro.has_macroType = true;
+    macro.enabled = true;
+    macro.has_enabled = true;
+    macro.showFrames = true;
+    macro.has_showFrames = true;
+    macro.has_useMacroTriggerButton = true;
+    macro.has_macroTriggerButton = true;
+    macro.has_exclusive = true;
+    macro.has_interruptible = true;
+
+    snprintf(macro.macroLabel, sizeof(macro.macroLabel), "%s%u", RECORD_LABEL_PREFIX, seq);
+    macro.has_macroLabel = true;
+
+    for (int i = 0; i < recordStepCount; i++) {
+        MacroInput& input = macro.macroInputs[i];
+        input.buttonMask = recordStepMask[i];
+        input.has_buttonMask = true;
+        input.duration = recordStepDuration[i];
+        input.has_duration = true;
+        input.waitDuration = recordStepWait[i];
+        input.has_waitDuration = true;
+    }
+    macro.macroInputs_count = recordStepCount;
+    inputMacroOptions->macroList_count = MAX_MACRO_LIMIT;
+    inputMacroOptions->enabled = true;
+    inputMacroOptions->has_enabled = true;
+
+    EventManager::getInstance().triggerEvent(new GPStorageSaveEvent(true));
+
+    recordStepCount = 0;
+    recordMask = 0;
+}
+
+void InputMacro::updateRecorder() {
+    if (recordPhase == RECORD_FLASHING) {
+        tickRecordFlash();
+        return;
+    }
+
+    Gamepad * gamepad = Storage::getInstance().GetGamepad();
+    bool fnDown = (gamepad->state.aux & AUX_MASK_FUNCTION) != 0;
+    uint64_t now = getMicro();
+
+    if (recordPhase == RECORD_ACTIVE) {
+        if (!fnDown) {
+            fnSeenReleased = true;
+            fnWasDown = false;
+        }
+        sampleRecording(now);
+        if (fnSeenReleased && fnDown) {
+            if (!fnWasDown) {
+                fnWasDown = true;
+                fnDownSince = now;
+            } else if ((now - fnDownSince) >= MACRO_RECORD_HOLD_US) {
+                if (recordingHasContent()) {
+                    sealOpenStep(now);
+                    beginRecordFlash(3, true);
+                } else {
+                    recordPhase = RECORD_IDLE;
+                    recordMask = 0;
+                    recordStepCount = 0;
+                    fnSeenReleased = false;
+                    fnWasDown = false;
+                    reset();
+                }
+            }
+        }
+        return;
+    }
+
+    if (!fnDown) {
+        fnWasDown = false;
+        fnSeenReleased = true;
+        return;
+    }
+    if (!fnSeenReleased) {
+        return;
+    }
+    if (!fnWasDown) {
+        fnWasDown = true;
+        fnDownSince = now;
+        return;
+    }
+    if ((now - fnDownSince) >= MACRO_RECORD_HOLD_US) {
+        beginRecordFlash(5, false);
     }
 }

@@ -29,8 +29,16 @@
 #define MAX_MACRO_LIMIT 6
 #define INPUT_HOLD_US 16666
 
+// Hold FN this long to start or finish a recording.
+#define MACRO_RECORD_HOLD_US 5000000ULL
+#define MACRO_RECORD_FRAME_US 16666U
+#define MACRO_RECORD_FLASH_MS 70
+
 // Input Macro Module Name
 #define InputMacroName "Input Macro"
+
+// True while the onboard LED is blinking a record start/save pattern.
+bool inputMacroLedOverride();
 
 class InputMacro : public GPAddon {
 public:
@@ -47,6 +55,15 @@ private:
     void runCurrentMacro();
     void reset();
     void restart(Macro& macro);
+    void updateRecorder();
+    void sampleRecording(uint64_t now);
+    void beginRecordFlash(int flashes, bool saving);
+    void tickRecordFlash();
+    void commitRecording();
+    void sealOpenStep(uint64_t now);
+    uint32_t captureRecordMask();
+    bool recordingHasContent() const;
+    uint32_t nextRecordSequence() const;
     bool isMacroRunning;
     bool isMacroTriggerHeld;
     int macroPosition;
@@ -60,6 +77,26 @@ private:
     bool prevMacroInputPressed;
     bool boardLedEnabled;
     MacroOptions * inputMacroOptions;
+
+    enum RecordPhase {
+        RECORD_IDLE = 0,
+        RECORD_FLASHING,
+        RECORD_ACTIVE,
+    };
+    RecordPhase recordPhase;
+    bool recordFlashSaves;
+    bool fnWasDown;
+    bool fnSeenReleased;
+    uint64_t fnDownSince;
+    int recordFlashesLeft;
+    bool recordLedOn;
+    uint32_t recordLedNextMs;
+    uint32_t recordMask;
+    uint64_t recordStepStart;
+    int recordStepCount;
+    uint32_t recordStepMask[MAX_MACRO_INPUT_LIMIT];
+    uint32_t recordStepDuration[MAX_MACRO_INPUT_LIMIT];
+    uint32_t recordStepWait[MAX_MACRO_INPUT_LIMIT];
 };
 
 #endif  // _InputMacro_H_
